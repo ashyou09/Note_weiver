@@ -62,7 +62,7 @@ cd rust && cargo build --release
 
 ## Powered by Sisyphus
 
-> [![Sisyphus Labs](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/sisyphuslabs.png)](https://sisyphuslabs.ai)
+> <a href="https://sisyphuslabs.ai"><img src="https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/sisyphus.png" height="300" /></a>
 > **Sisyphus is the agent that codes like your team. The Rust port was built entirely by Sisyphus in `ultrawork` mode.**
 > [**Join the waitlist**](https://sisyphuslabs.ai)
 
