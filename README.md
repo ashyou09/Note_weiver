@@ -33,21 +33,6 @@
 
 ---
 
-## Powered by Sisyphus
-
-> [![Sisyphus Labs](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/sisyphuslabs.png)](https://sisyphuslabs.ai)
-> **Sisyphus is the agent that codes like your team. The Rust port was built entirely by Sisyphus in `ultrawork` mode.**
-> [**Join the waitlist**](https://sisyphuslabs.ai)
-
-> *"If Claude Code does in 7 days what a human does in 3 months, Sisyphus does it in 1 hour. It just works until the task is done."* — B, Quant Researcher
->
-> *"Hire @yeon_gyu_kim if you can convince him, this dude has revolutionized opencode."* — [mysticaltech](https://x.com/mysticaltech)
-
-[![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
-
----
-
 ## Rust Port — Built with oh-my-opencode
 
 The entire Rust implementation under `rust/` was ported and engineered using [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) ([@code-yeongyu](https://github.com/code-yeongyu)) — an agent orchestration layer for [opencode](https://opencode.ai).
@@ -69,6 +54,21 @@ Every crate, every test, every commit was driven through oh-my-opencode's **Sisy
 cd rust && cargo build --release
 ./target/release/claw --help
 ```
+
+---
+
+## Powered by Sisyphus
+
+> [![Sisyphus Labs](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/sisyphuslabs.png)](https://sisyphuslabs.ai)
+> **Sisyphus is the agent that codes like your team. The Rust port was built entirely by Sisyphus in `ultrawork` mode.**
+> [**Join the waitlist**](https://sisyphuslabs.ai)
+
+> *"If Claude Code does in 7 days what a human does in 3 months, Sisyphus does it in 1 hour. It just works until the task is done."* — B, Quant Researcher
+>
+> *"Hire @yeon_gyu_kim if you can convince him, this dude has revolutionized opencode."* — [mysticaltech](https://x.com/mysticaltech)
+
+[![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
 
 ---
 
