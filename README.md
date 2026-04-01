@@ -189,25 +189,17 @@ The port now mirrors the archived root-entry file surface, top-level subsystem n
 
 ## Built with `oh-my-codex` and `oh-my-opencode`
 
-The restructuring and documentation work on this repository was AI-assisted and orchestrated with Yeachan Heo's [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex), layered on top of Codex.
+This repository's porting, cleanroom hardening, and verification workflow was AI-assisted with Yeachan Heo's tooling stack:
 
-- **`$team` mode:** used for coordinated parallel review and architectural feedback
-- **`$ralph` mode:** used for persistent execution, verification, and completion discipline
-- **Codex-driven workflow:** used to turn the main `src/` tree into a Python-first porting workspace
+- [**oh-my-codex (OmX)**](https://github.com/Yeachan-Heo/oh-my-codex) — primary scaffolding, orchestration, and core porting workflow
+- [**oh-my-opencode (OmO)**](https://github.com/instructkr/oh-my-opencode) — implementation acceleration, cleanup passes, and verification support
 
-### oh-my-opencode (Rust port)
+Key workflow patterns used during the port:
 
-- **Sisyphus agent:** autonomous coding agent that handled the full Rust implementation
-- **`ultrawork` mode:** maximum-performance execution with plan→implement→verify loops  
-- **Cleanroom pass:** comprehensive Claude/Anthropic residue removal across 55 files
-- **274 tests passing** across the entire Rust workspace
-
-### Jobdori (OpenClaw)
-
-- **Orchestration:** coordinated Sisyphus sessions, verified outputs, managed git workflow
-- **Manual QA:** 18-point functional test suite run against the built binary
-- **Cleanroom audit:** grep-based verification ensuring zero Claude/Anthropic branding leakage
-- **Infrastructure:** CLIProxyAPI integration, branch protection, force-push management
+- **`$team` mode:** coordinated parallel review and architectural feedback
+- **`$ralph` mode:** persistent execution, verification, and completion discipline
+- **Cleanroom passes:** naming/branding cleanup, QA, and release validation across the Rust workspace
+- **Manual and live validation:** build, test, manual QA, and real API-path verification before publish
 
 ### OmX workflow screenshots
 
