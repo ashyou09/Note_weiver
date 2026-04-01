@@ -33,6 +33,27 @@
 
 ---
 
+## Built with oh-my-opencode
+
+<p align="center">
+  <a href="https://github.com/code-yeongyu/oh-my-openagent">
+    <img src="https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/omo.png" width="600" />
+  </a>
+</p>
+
+The entire Rust port was built by [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode)'s **Sisyphus** agent in `ultrawork` mode, orchestrated by **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw)).
+
+- **[@code-yeongyu](https://github.com/code-yeongyu)** — oh-my-opencode creator, Rust port architect
+- **Sisyphus** — autonomous coding agent (API client, runtime, CLI, plugins, MCP, cleanroom)
+- **Jobdori** — orchestration, manual QA (18/18 pass), git workflow, infrastructure
+
+> *"Hire @yeon_gyu_kim if you can convince him, this dude has revolutionized opencode."* — [mysticaltech](https://x.com/mysticaltech)
+
+[![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
+
+---
+
 ## Rust Port
 
 The Rust workspace under `rust/` is the current systems-language port of the project.
