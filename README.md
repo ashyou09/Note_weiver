@@ -33,6 +33,38 @@
 
 ---
 
+## Built with oh-my-opencode
+
+<p align="center">
+  <a href="https://github.com/code-yeongyu/oh-my-openagent">
+    <img src="https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/omo.png" width="600" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/code-yeongyu/oh-my-openagent"><strong>oh-my-opencode</strong></a> — the agent orchestration layer that makes AI coding actually work.
+  <br />
+  <em>Sisyphus doesn't stop until the task is done. Every test passes. Every review clears.</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/code-yeongyu/oh-my-openagent"><img src="https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=for-the-badge&logo=github" /></a>
+  <a href="https://www.npmjs.com/package/oh-my-opencode"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=for-the-badge" /></a>
+  <a href="https://discord.gg/PUwSMR9XNk"><img src="https://img.shields.io/discord/1452487457085063218?color=5865F2&label=discord&labelColor=black&logo=discord&logoColor=white&style=for-the-badge" /></a>
+</p>
+
+The **entire Rust port** was built by oh-my-opencode's **Sisyphus** agent in `ultrawork` mode.
+
+> *"If Claude Code does in 7 days what a human does in 3 months, Sisyphus does it in 1 hour."* — B, Quant Researcher
+
+> *"Oh My OpenCode Is Actually Insane"* — [YouTube - Darren Builds AI](https://www.youtube.com/watch?v=G_Snfh2M41M)
+
+**Credits:** [@code-yeongyu](https://github.com/code-yeongyu) (oh-my-opencode creator) · **Sisyphus** (autonomous coding agent) · **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw))
+
+<p align="center"><code>npx oh-my-opencode@latest</code></p>
+
+---
+
 ## Rust Port
 
 The Rust workspace under `rust/` is the current systems-language port of the project.
