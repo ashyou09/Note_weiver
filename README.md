@@ -33,6 +33,29 @@
 
 ---
 
+## Rust Port — Built with oh-my-opencode
+
+The entire Rust implementation under `rust/` was ported and engineered using [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) — an agent orchestration layer for [opencode](https://opencode.ai).
+
+The Rust port is a complete, working CLI (`claw`) with:
+- Streaming API client with SSE support
+- Interactive REPL with markdown rendering
+- Tool execution (bash, file read/write/edit, search)
+- MCP (Model Context Protocol) stdio integration
+- Plugin system with hooks pipeline
+- CLAW.md project memory and config hierarchy
+- OAuth authentication flow
+- Session persistence and compaction
+
+Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The Rust port passes all 274 tests across the workspace.
+
+```bash
+cd rust && cargo build --release
+./target/release/claw --help
+```
+
+---
+
 ## Backstory
 
 At 4 AM on March 31, 2026, I woke up to my phone blowing up with notifications. The Claw Code source had been exposed, and the entire dev community was in a frenzy. My girlfriend in Korea was genuinely worried I might face legal action from the original authors just for having the code on my machine — so I did what any engineer would do under pressure: I sat down, ported the core features to Python from scratch, and pushed it before the sun came up.
@@ -40,6 +63,8 @@ At 4 AM on March 31, 2026, I woke up to my phone blowing up with notifications. 
 The whole thing was orchestrated end-to-end using [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex) by [@bellman_ych](https://x.com/bellman_ych) — a workflow layer built on top of OpenAI's Codex ([@OpenAIDevs](https://x.com/OpenAIDevs)). I used `$team` mode for parallel code review and `$ralph` mode for persistent execution loops with architect-level verification. The entire porting session — from reading the original harness structure to producing a working Python tree with tests — was driven through OmX orchestration.
 
 The result is a clean-room Python rewrite that captures the architectural patterns of Claw Code's agent harness without copying any proprietary source. I'm now actively collaborating with [@bellman_ych](https://x.com/bellman_ych) — the creator of OmX himself — to push this further. The basic Python foundation is already in place and functional, but we're just getting started. **Stay tuned — a much more capable version is on the way.**
+
+The Rust port was built separately using [oh-my-opencode (OMO)](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim), which orchestrates [opencode](https://opencode.ai) agents. The **Sisyphus** agent handled everything — API client, runtime engine, CLI, plugin system, MCP integration, and the full cleanroom pass — all in `ultrawork` mode.
 
 https://github.com/instructkr/claw-code
 
@@ -92,6 +117,13 @@ This repository now focuses on Python porting work instead.
 │   ├── query_engine.py
 │   ├── task.py
 │   └── tools.py
+├── rust/                               # Rust port (claw CLI)
+│   ├── crates/api/                     # API client + streaming
+│   ├── crates/runtime/                 # Session, tools, MCP, config
+│   ├── crates/claw-cli/               # Interactive CLI binary
+│   ├── crates/plugins/                 # Plugin system
+│   ├── crates/commands/                # Slash commands
+│   └── crates/tools/                   # Tool specs
 ├── tests/                              # Python verification
 ├── assets/omx/                         # OmX workflow screenshots
 ├── 2026-03-09-is-legal-the-same-as-legitimate-ai-reimplementation-and-the-erosion-of-copyleft.md
@@ -153,13 +185,20 @@ python3 -m src.main tools --limit 10
 The port now mirrors the archived root-entry file surface, top-level subsystem names, and command/tool inventories much more closely than before. However, it is **not yet** a full runtime-equivalent replacement for the original TypeScript system; the Python tree still contains fewer executable runtime slices than the archived source.
 
 
-## Built with `oh-my-codex`
+## Built with `oh-my-codex` and `oh-my-opencode`
 
 The restructuring and documentation work on this repository was AI-assisted and orchestrated with Yeachan Heo's [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex), layered on top of Codex.
 
 - **`$team` mode:** used for coordinated parallel review and architectural feedback
 - **`$ralph` mode:** used for persistent execution, verification, and completion discipline
 - **Codex-driven workflow:** used to turn the main `src/` tree into a Python-first porting workspace
+
+### oh-my-opencode (Rust port)
+
+- **Sisyphus agent:** autonomous coding agent that handled the full Rust implementation
+- **`ultrawork` mode:** maximum-performance execution with plan→implement→verify loops  
+- **Cleanroom pass:** comprehensive Claude/Anthropic residue removal across 55 files
+- **274 tests passing** across the entire Rust workspace
 
 ### OmX workflow screenshots
 
