@@ -62,7 +62,7 @@ The whole thing was orchestrated end-to-end using [oh-my-codex (OmX)](https://gi
 
 The result is a clean-room Python rewrite that captures the architectural patterns of Claw Code's agent harness without copying any proprietary source. I'm now actively collaborating with [@bellman_ych](https://x.com/bellman_ych) — the creator of OmX himself — to push this further. The basic Python foundation is already in place and functional, but we're just getting started. **Stay tuned — a much more capable version is on the way.**
 
-The Rust port was built separately using [oh-my-opencode (OMO)](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) ([@code-yeongyu](https://github.com/code-yeongyu)), which orchestrates [opencode](https://opencode.ai) agents. **The scaffolding and architecture direction were established with [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex),** and the **Sisyphus** agent then handled implementation work across the API client, runtime engine, CLI, plugin system, MCP integration, and the cleanroom pass in `ultrawork` mode.
+The Rust port was scaffolded and architected with [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex). [oh-my-opencode (OmO)](https://github.com/instructkr/oh-my-opencode) was also used as a supporting implementation tool during later execution and verification passes.
 
 https://github.com/instructkr/claw-code
 
@@ -188,8 +188,8 @@ The port now mirrors the archived root-entry file surface, top-level subsystem n
 
 This repository's porting, cleanroom hardening, and verification workflow was AI-assisted with Yeachan Heo's tooling stack, with **oh-my-codex (OmX)** as the primary scaffolding and orchestration layer.
 
-- [**oh-my-codex (OmX)**](https://github.com/Yeachan-Heo/oh-my-codex) — main branch credit: primary scaffolding, orchestration, and core porting workflow
-- [**oh-my-opencode (OmO)**](https://github.com/instructkr/oh-my-opencode) — implementation acceleration, cleanup passes, and verification support
+- [**oh-my-codex (OmX)**](https://github.com/Yeachan-Heo/oh-my-codex) — primary scaffolding, orchestration, architecture direction, and core porting workflow
+- [**oh-my-opencode (OmO)**](https://github.com/instructkr/oh-my-opencode) — secondary implementation and verification support
 
 Key workflow patterns used during the port:
 
