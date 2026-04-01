@@ -62,7 +62,7 @@ The whole thing was orchestrated end-to-end using [oh-my-codex (OmX)](https://gi
 
 The result is a clean-room Python rewrite that captures the architectural patterns of Claw Code's agent harness without copying any proprietary source. I'm now actively collaborating with [@bellman_ych](https://x.com/bellman_ych) — the creator of OmX himself — to push this further. The basic Python foundation is already in place and functional, but we're just getting started. **Stay tuned — a much more capable version is on the way.**
 
-The Rust port was built separately using [oh-my-opencode (OMO)](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) ([@code-yeongyu](https://github.com/code-yeongyu)), which orchestrates [opencode](https://opencode.ai) agents. The **Sisyphus** agent handled everything — API client, runtime engine, CLI, plugin system, MCP integration, and the full cleanroom pass — all in `ultrawork` mode.
+The Rust port was built separately using [oh-my-opencode (OMO)](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) ([@code-yeongyu](https://github.com/code-yeongyu)), which orchestrates [opencode](https://opencode.ai) agents. **The scaffolding and architecture direction were established with [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex),** and the **Sisyphus** agent then handled implementation work across the API client, runtime engine, CLI, plugin system, MCP integration, and the cleanroom pass in `ultrawork` mode.
 
 https://github.com/instructkr/claw-code
 
