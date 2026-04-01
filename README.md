@@ -47,7 +47,7 @@ The Rust port is a complete, working CLI (`claw`) with:
 - OAuth authentication flow
 - Session persistence and compaction
 
-Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The Rust port passes all 274 tests across the workspace.
+Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The cleanroom refactor, QA verification, git history rewrite, and CI setup were coordinated by **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw)), an AI assistant orchestrating the entire workflow. The Rust port passes all 274 tests across the workspace.
 
 ```bash
 cd rust && cargo build --release
@@ -199,6 +199,13 @@ The restructuring and documentation work on this repository was AI-assisted and 
 - **`ultrawork` mode:** maximum-performance execution with plan→implement→verify loops  
 - **Cleanroom pass:** comprehensive Claude/Anthropic residue removal across 55 files
 - **274 tests passing** across the entire Rust workspace
+
+### Jobdori (OpenClaw)
+
+- **Orchestration:** coordinated Sisyphus sessions, verified outputs, managed git workflow
+- **Manual QA:** 18-point functional test suite run against the built binary
+- **Cleanroom audit:** grep-based verification ensuring zero Claude/Anthropic branding leakage
+- **Infrastructure:** CLIProxyAPI integration, branch protection, force-push management
 
 ### OmX workflow screenshots
 
