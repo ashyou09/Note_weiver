@@ -16,7 +16,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use api::{
-    resolve_startup_auth_source, AuthSource, ClawApiClient, ContentBlockDelta, InputContentBlock,
+    resolve_startup_auth_source, ClawApiClient, AuthSource, ContentBlockDelta, InputContentBlock,
     InputMessage, MessageRequest, MessageResponse, OutputContentBlock,
     StreamEvent as ApiStreamEvent, ToolChoice, ToolDefinition, ToolResultContentBlock,
 };
@@ -1854,6 +1854,7 @@ fn render_repl_help() -> String {
         "REPL".to_string(),
         "  /exit                Quit the REPL".to_string(),
         "  /quit                Quit the REPL".to_string(),
+        "  /vim                 Toggle Vim keybindings".to_string(),
         "  Up/Down              Navigate prompt history".to_string(),
         "  Tab                  Complete slash commands".to_string(),
         "  Ctrl-C               Clear input (or exit on empty prompt)".to_string(),
@@ -2037,7 +2038,8 @@ fn render_memory_report() -> Result<String, Box<dyn std::error::Error>> {
     if project_context.instruction_files.is_empty() {
         lines.push("Discovered files".to_string());
         lines.push(
-            "  No CLAW instruction files discovered in the current directory ancestry.".to_string(),
+            "  No CLAW instruction files discovered in the current directory ancestry."
+                .to_string(),
         );
     } else {
         lines.push("Discovered files".to_string());
@@ -2789,8 +2791,7 @@ fn build_runtime(
     allowed_tools: Option<AllowedToolSet>,
     permission_mode: PermissionMode,
     progress_reporter: Option<InternalPromptProgressReporter>,
-) -> Result<ConversationRuntime<DefaultRuntimeClient, CliToolExecutor>, Box<dyn std::error::Error>>
-{
+) -> Result<ConversationRuntime<DefaultRuntimeClient, CliToolExecutor>, Box<dyn std::error::Error>> {
     let (feature_config, tool_registry) = build_runtime_plugin_state()?;
     Ok(ConversationRuntime::new_with_features(
         session,
@@ -3101,7 +3102,7 @@ fn collect_tool_results(summary: &runtime::TurnSummary) -> Vec<serde_json::Value
 }
 
 fn slash_command_completion_candidates() -> Vec<String> {
-    slash_command_specs()
+    let mut candidates = slash_command_specs()
         .iter()
         .flat_map(|spec| {
             std::iter::once(spec.name)
@@ -3109,7 +3110,9 @@ fn slash_command_completion_candidates() -> Vec<String> {
                 .map(|name| format!("/{name}"))
                 .collect::<Vec<_>>()
         })
-        .collect()
+        .collect::<Vec<_>>();
+    candidates.push("/vim".to_string());
+    candidates
 }
 
 fn format_tool_call_start(name: &str, input: &str) -> String {
