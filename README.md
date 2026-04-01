@@ -47,6 +47,7 @@ The Rust port is a complete, working CLI (`claw`) with:
 - OAuth authentication flow
 - Session persistence and compaction
 - HTTP/SSE server (axum-based, direct connect sessions)
+- LSP client integration (diagnostics, go-to-definition, find-references)
 
 Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The cleanroom refactor, QA verification, git history rewrite, and CI setup were coordinated by **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw)), an AI assistant orchestrating the entire workflow. The Rust port passes all 274 tests across the workspace.
 
@@ -140,6 +141,7 @@ This repository now focuses on Python porting work instead.
 │   ├── crates/plugins/                 # Plugin system
 │   ├── crates/commands/                # Slash commands
 │   ├── crates/server/                  # HTTP/SSE server (axum)
+│   ├── crates/lsp/                    # LSP client integration
 │   └── crates/tools/                   # Tool specs
 ├── tests/                              # Python verification
 ├── assets/omx/                         # OmX workflow screenshots
