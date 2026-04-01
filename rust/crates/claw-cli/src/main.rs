@@ -939,6 +939,9 @@ fn run_resume_command(
             })
         }
         SlashCommand::Bughunter { .. }
+        | SlashCommand::Branch { .. }
+        | SlashCommand::Worktree { .. }
+        | SlashCommand::CommitPushPr { .. }
         | SlashCommand::Commit
         | SlashCommand::Pr { .. }
         | SlashCommand::Issue { .. }
@@ -1240,6 +1243,18 @@ impl LiveCli {
             }
             SlashCommand::Skills { args } => {
                 Self::print_skills(args.as_deref())?;
+                false
+            }
+            SlashCommand::Branch { .. } => {
+                eprintln!("git branch commands not yet wired to REPL");
+                false
+            }
+            SlashCommand::Worktree { .. } => {
+                eprintln!("git worktree commands not yet wired to REPL");
+                false
+            }
+            SlashCommand::CommitPushPr { .. } => {
+                eprintln!("commit-push-pr not yet wired to REPL");
                 false
             }
             SlashCommand::Unknown(name) => {

@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use plugins::{PluginError, PluginManager, PluginSummary};
 use runtime::{compact_session, CompactionConfig, Session};
@@ -145,10 +148,31 @@ const SLASH_COMMAND_SPECS: &[SlashCommandSpec] = &[
         resume_supported: false,
     },
     SlashCommandSpec {
+        name: "branch",
+        aliases: &[],
+        summary: "List, create, or switch git branches",
+        argument_hint: Some("[list|create <name>|switch <name>]"),
+        resume_supported: false,
+    },
+    SlashCommandSpec {
+        name: "worktree",
+        aliases: &[],
+        summary: "List, add, remove, or prune git worktrees",
+        argument_hint: Some("[list|add <path> [branch]|remove <path>|prune]"),
+        resume_supported: false,
+    },
+    SlashCommandSpec {
         name: "commit",
         aliases: &[],
         summary: "Generate a commit message and create a git commit",
         argument_hint: None,
+        resume_supported: false,
+    },
+    SlashCommandSpec {
+        name: "commit-push-pr",
+        aliases: &[],
+        summary: "Commit workspace changes, push the branch, and open a PR",
+        argument_hint: Some("[context]"),
         resume_supported: false,
     },
     SlashCommandSpec {
@@ -230,10 +254,22 @@ pub enum SlashCommand {
     Help,
     Status,
     Compact,
+    Branch {
+        action: Option<String>,
+        target: Option<String>,
+    },
     Bughunter {
         scope: Option<String>,
     },
+    Worktree {
+        action: Option<String>,
+        path: Option<String>,
+        branch: Option<String>,
+    },
     Commit,
+    CommitPushPr {
+        context: Option<String>,
+    },
     Pr {
         context: Option<String>,
     },
@@ -301,10 +337,22 @@ impl SlashCommand {
             "help" => Self::Help,
             "status" => Self::Status,
             "compact" => Self::Compact,
+            "branch" => Self::Branch {
+                action: parts.next().map(ToOwned::to_owned),
+                target: parts.next().map(ToOwned::to_owned),
+            },
             "bughunter" => Self::Bughunter {
                 scope: remainder_after_command(trimmed, command),
             },
+            "worktree" => Self::Worktree {
+                action: parts.next().map(ToOwned::to_owned),
+                path: parts.next().map(ToOwned::to_owned),
+                branch: parts.next().map(ToOwned::to_owned),
+            },
             "commit" => Self::Commit,
+            "commit-push-pr" => Self::CommitPushPr {
+                context: remainder_after_command(trimmed, command),
+            },
             "pr" => Self::Pr {
                 context: remainder_after_command(trimmed, command),
             },
@@ -629,6 +677,392 @@ pub fn handle_skills_slash_command(args: Option<&str>, cwd: &Path) -> std::io::R
         Some("-h" | "--help" | "help") => Ok(render_skills_usage(None)),
         Some(args) => Ok(render_skills_usage(Some(args))),
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommitPushPrRequest {
+    pub commit_message: Option<String>,
+    pub pr_title: String,
+    pub pr_body: String,
+    pub branch_name_hint: String,
+}
+
+pub fn handle_branch_slash_command(
+    action: Option<&str>,
+    target: Option<&str>,
+    cwd: &Path,
+) -> io::Result<String> {
+    match normalize_optional_args(action) {
+        None | Some("list") => {
+            let branches = git_stdout(cwd, &["branch", "--list", "--verbose"])?;
+            let trimmed = branches.trim();
+            Ok(if trimmed.is_empty() {
+                "Branch\n  Result           no branches found".to_string()
+            } else {
+                format!("Branch\n  Result           listed\n\n{}", trimmed)
+            })
+        }
+        Some("create") => {
+            let Some(target) = target.filter(|value| !value.trim().is_empty()) else {
+                return Ok("Usage: /branch create <name>".to_string());
+            };
+            git_status_ok(cwd, &["switch", "-c", target])?;
+            Ok(format!(
+                "Branch\n  Result           created and switched\n  Branch           {target}"
+            ))
+        }
+        Some("switch") => {
+            let Some(target) = target.filter(|value| !value.trim().is_empty()) else {
+                return Ok("Usage: /branch switch <name>".to_string());
+            };
+            git_status_ok(cwd, &["switch", target])?;
+            Ok(format!(
+                "Branch\n  Result           switched\n  Branch           {target}"
+            ))
+        }
+        Some(other) => Ok(format!(
+            "Unknown /branch action '{other}'. Use /branch list, /branch create <name>, or /branch switch <name>."
+        )),
+    }
+}
+
+pub fn handle_worktree_slash_command(
+    action: Option<&str>,
+    path: Option<&str>,
+    branch: Option<&str>,
+    cwd: &Path,
+) -> io::Result<String> {
+    match normalize_optional_args(action) {
+        None | Some("list") => {
+            let worktrees = git_stdout(cwd, &["worktree", "list"])?;
+            let trimmed = worktrees.trim();
+            Ok(if trimmed.is_empty() {
+                "Worktree\n  Result           no worktrees found".to_string()
+            } else {
+                format!("Worktree\n  Result           listed\n\n{}", trimmed)
+            })
+        }
+        Some("add") => {
+            let Some(path) = path.filter(|value| !value.trim().is_empty()) else {
+                return Ok("Usage: /worktree add <path> [branch]".to_string());
+            };
+            if let Some(branch) = branch.filter(|value| !value.trim().is_empty()) {
+                if branch_exists(cwd, branch) {
+                    git_status_ok(cwd, &["worktree", "add", path, branch])?;
+                } else {
+                    git_status_ok(cwd, &["worktree", "add", path, "-b", branch])?;
+                }
+                Ok(format!(
+                    "Worktree\n  Result           added\n  Path             {path}\n  Branch           {branch}"
+                ))
+            } else {
+                git_status_ok(cwd, &["worktree", "add", path])?;
+                Ok(format!(
+                    "Worktree\n  Result           added\n  Path             {path}"
+                ))
+            }
+        }
+        Some("remove") => {
+            let Some(path) = path.filter(|value| !value.trim().is_empty()) else {
+                return Ok("Usage: /worktree remove <path>".to_string());
+            };
+            git_status_ok(cwd, &["worktree", "remove", path])?;
+            Ok(format!(
+                "Worktree\n  Result           removed\n  Path             {path}"
+            ))
+        }
+        Some("prune") => {
+            git_status_ok(cwd, &["worktree", "prune"])?;
+            Ok("Worktree\n  Result           pruned".to_string())
+        }
+        Some(other) => Ok(format!(
+            "Unknown /worktree action '{other}'. Use /worktree list, /worktree add <path> [branch], /worktree remove <path>, or /worktree prune."
+        )),
+    }
+}
+
+pub fn handle_commit_slash_command(message: &str, cwd: &Path) -> io::Result<String> {
+    let status = git_stdout(cwd, &["status", "--short"])?;
+    if status.trim().is_empty() {
+        return Ok(
+            "Commit\n  Result           skipped\n  Reason           no workspace changes"
+                .to_string(),
+        );
+    }
+
+    let message = message.trim();
+    if message.is_empty() {
+        return Err(io::Error::other("generated commit message was empty"));
+    }
+
+    git_status_ok(cwd, &["add", "-A"])?;
+    let path = write_temp_text_file("claw-commit-message", "txt", message)?;
+    let path_string = path.to_string_lossy().into_owned();
+    git_status_ok(cwd, &["commit", "--file", path_string.as_str()])?;
+
+    Ok(format!(
+        "Commit\n  Result           created\n  Message file     {}\n\n{}",
+        path.display(),
+        message
+    ))
+}
+
+pub fn handle_commit_push_pr_slash_command(
+    request: &CommitPushPrRequest,
+    cwd: &Path,
+) -> io::Result<String> {
+    if !command_exists("gh") {
+        return Err(io::Error::other("gh CLI is required for /commit-push-pr"));
+    }
+
+    let default_branch = detect_default_branch(cwd)?;
+    let mut branch = current_branch(cwd)?;
+    let mut created_branch = false;
+    if branch == default_branch {
+        let hint = if request.branch_name_hint.trim().is_empty() {
+            request.pr_title.as_str()
+        } else {
+            request.branch_name_hint.as_str()
+        };
+        let next_branch = build_branch_name(hint);
+        git_status_ok(cwd, &["switch", "-c", next_branch.as_str()])?;
+        branch = next_branch;
+        created_branch = true;
+    }
+
+    let workspace_has_changes = !git_stdout(cwd, &["status", "--short"])?.trim().is_empty();
+    let commit_report = if workspace_has_changes {
+        let Some(message) = request.commit_message.as_deref() else {
+            return Err(io::Error::other(
+                "commit message is required when workspace changes are present",
+            ));
+        };
+        Some(handle_commit_slash_command(message, cwd)?)
+    } else {
+        None
+    };
+
+    let branch_diff = git_stdout(
+        cwd,
+        &["diff", "--stat", &format!("{default_branch}...HEAD")],
+    )?;
+    if branch_diff.trim().is_empty() {
+        return Ok(
+            "Commit/Push/PR\n  Result           skipped\n  Reason           no branch changes to push or open as a pull request"
+                .to_string(),
+        );
+    }
+
+    git_status_ok(cwd, &["push", "--set-upstream", "origin", branch.as_str()])?;
+
+    let body_path = write_temp_text_file("claw-pr-body", "md", request.pr_body.trim())?;
+    let body_path_string = body_path.to_string_lossy().into_owned();
+    let create = Command::new("gh")
+        .args([
+            "pr",
+            "create",
+            "--title",
+            request.pr_title.as_str(),
+            "--body-file",
+            body_path_string.as_str(),
+            "--base",
+            default_branch.as_str(),
+        ])
+        .current_dir(cwd)
+        .output()?;
+
+    let (result, url) = if create.status.success() {
+        (
+            "created",
+            parse_pr_url(&String::from_utf8_lossy(&create.stdout))
+                .unwrap_or_else(|| "<unknown>".to_string()),
+        )
+    } else {
+        let view = Command::new("gh")
+            .args(["pr", "view", "--json", "url"])
+            .current_dir(cwd)
+            .output()?;
+        if !view.status.success() {
+            return Err(io::Error::other(command_failure(
+                "gh",
+                &["pr", "create"],
+                &create,
+            )));
+        }
+        (
+            "existing",
+            parse_pr_json_url(&String::from_utf8_lossy(&view.stdout))
+                .unwrap_or_else(|| "<unknown>".to_string()),
+        )
+    };
+
+    let mut lines = vec![
+        "Commit/Push/PR".to_string(),
+        format!("  Result           {result}"),
+        format!("  Branch           {branch}"),
+        format!("  Base             {default_branch}"),
+        format!("  Body file        {}", body_path.display()),
+        format!("  URL              {url}"),
+    ];
+    if created_branch {
+        lines.insert(2, "  Branch action    created and switched".to_string());
+    }
+    if let Some(report) = commit_report {
+        lines.push(String::new());
+        lines.push(report);
+    }
+    Ok(lines.join("\n"))
+}
+
+pub fn detect_default_branch(cwd: &Path) -> io::Result<String> {
+    if let Ok(reference) = git_stdout(cwd, &["symbolic-ref", "refs/remotes/origin/HEAD"]) {
+        if let Some(branch) = reference
+            .trim()
+            .rsplit('/')
+            .next()
+            .filter(|value| !value.is_empty())
+        {
+            return Ok(branch.to_string());
+        }
+    }
+
+    for branch in ["main", "master"] {
+        if branch_exists(cwd, branch) {
+            return Ok(branch.to_string());
+        }
+    }
+
+    current_branch(cwd)
+}
+
+fn git_stdout(cwd: &Path, args: &[&str]) -> io::Result<String> {
+    run_command_stdout("git", args, cwd)
+}
+
+fn git_status_ok(cwd: &Path, args: &[&str]) -> io::Result<()> {
+    run_command_success("git", args, cwd)
+}
+
+fn run_command_stdout(program: &str, args: &[&str], cwd: &Path) -> io::Result<String> {
+    let output = Command::new(program).args(args).current_dir(cwd).output()?;
+    if !output.status.success() {
+        return Err(io::Error::other(command_failure(program, args, &output)));
+    }
+    String::from_utf8(output.stdout)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+}
+
+fn run_command_success(program: &str, args: &[&str], cwd: &Path) -> io::Result<()> {
+    let output = Command::new(program).args(args).current_dir(cwd).output()?;
+    if !output.status.success() {
+        return Err(io::Error::other(command_failure(program, args, &output)));
+    }
+    Ok(())
+}
+
+fn command_failure(program: &str, args: &[&str], output: &std::process::Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let detail = if stderr.is_empty() { stdout } else { stderr };
+    if detail.is_empty() {
+        format!("{program} {} failed", args.join(" "))
+    } else {
+        format!("{program} {} failed: {detail}", args.join(" "))
+    }
+}
+
+fn branch_exists(cwd: &Path, branch: &str) -> bool {
+    Command::new("git")
+        .args([
+            "show-ref",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ])
+        .current_dir(cwd)
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+fn current_branch(cwd: &Path) -> io::Result<String> {
+    let branch = git_stdout(cwd, &["branch", "--show-current"])?;
+    let branch = branch.trim();
+    if branch.is_empty() {
+        Err(io::Error::other("unable to determine current git branch"))
+    } else {
+        Ok(branch.to_string())
+    }
+}
+
+fn command_exists(name: &str) -> bool {
+    Command::new(name)
+        .arg("--version")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+fn write_temp_text_file(prefix: &str, extension: &str, contents: &str) -> io::Result<PathBuf> {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+    let path = env::temp_dir().join(format!("{prefix}-{nanos}.{extension}"));
+    fs::write(&path, contents)?;
+    Ok(path)
+}
+
+fn build_branch_name(hint: &str) -> String {
+    let slug = slugify(hint);
+    let owner = env::var("SAFEUSER")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            env::var("USER")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+    match owner {
+        Some(owner) => format!("{owner}/{slug}"),
+        None => slug,
+    }
+}
+
+fn slugify(value: &str) -> String {
+    let mut slug = String::new();
+    let mut last_was_dash = false;
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_was_dash = false;
+        } else if !last_was_dash {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() {
+        "change".to_string()
+    } else {
+        slug
+    }
+}
+
+fn parse_pr_url(stdout: &str) -> Option<String> {
+    stdout
+        .lines()
+        .map(str::trim)
+        .find(|line| line.starts_with("http://") || line.starts_with("https://"))
+        .map(ToOwned::to_owned)
+}
+
+fn parse_pr_json_url(stdout: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(stdout)
+        .ok()?
+        .get("url")?
+        .as_str()
+        .map(ToOwned::to_owned)
 }
 
 #[must_use]
@@ -1181,8 +1615,11 @@ pub fn handle_slash_command(
             session: session.clone(),
         }),
         SlashCommand::Status
+        | SlashCommand::Branch { .. }
         | SlashCommand::Bughunter { .. }
+        | SlashCommand::Worktree { .. }
         | SlashCommand::Commit
+        | SlashCommand::CommitPushPr { .. }
         | SlashCommand::Pr { .. }
         | SlashCommand::Issue { .. }
         | SlashCommand::Ultraplan { .. }
@@ -1210,16 +1647,24 @@ pub fn handle_slash_command(
 #[cfg(test)]
 mod tests {
     use super::{
-        handle_plugins_slash_command, handle_slash_command, load_agents_from_roots,
-        load_skills_from_roots, render_agents_report, render_plugins_report, render_skills_report,
+        handle_branch_slash_command, handle_commit_push_pr_slash_command,
+        handle_commit_slash_command, handle_plugins_slash_command, handle_slash_command,
+        handle_worktree_slash_command, load_agents_from_roots, load_skills_from_roots,
+        render_agents_report, render_plugins_report, render_skills_report,
         render_slash_command_help, resume_supported_slash_commands, slash_command_specs,
-        DefinitionSource, SkillOrigin, SkillRoot, SlashCommand,
+        CommitPushPrRequest, DefinitionSource, SkillOrigin, SkillRoot, SlashCommand,
     };
     use plugins::{PluginKind, PluginManager, PluginManagerConfig, PluginMetadata, PluginSummary};
     use runtime::{CompactionConfig, ContentBlock, ConversationMessage, MessageRole, Session};
+    use std::env;
     use std::fs;
     use std::path::{Path, PathBuf};
+    use std::process::Command;
+    use std::sync::{Mutex, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
 
     fn temp_dir(label: &str) -> PathBuf {
         let nanos = SystemTime::now()
@@ -1227,6 +1672,91 @@ mod tests {
             .expect("time should be after epoch")
             .as_nanos();
         std::env::temp_dir().join(format!("commands-plugin-{label}-{nanos}"))
+    }
+
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("env lock")
+    }
+
+    fn run_command(cwd: &Path, program: &str, args: &[&str]) -> String {
+        let output = Command::new(program)
+            .args(args)
+            .current_dir(cwd)
+            .output()
+            .expect("command should run");
+        assert!(
+            output.status.success(),
+            "{} {} failed: {}",
+            program,
+            args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).expect("stdout should be utf8")
+    }
+
+    fn init_git_repo(label: &str) -> PathBuf {
+        let root = temp_dir(label);
+        fs::create_dir_all(&root).expect("repo root");
+
+        let init = Command::new("git")
+            .args(["init", "-b", "main"])
+            .current_dir(&root)
+            .output()
+            .expect("git init should run");
+        if !init.status.success() {
+            let fallback = Command::new("git")
+                .arg("init")
+                .current_dir(&root)
+                .output()
+                .expect("fallback git init should run");
+            assert!(
+                fallback.status.success(),
+                "fallback git init should succeed"
+            );
+            let rename = Command::new("git")
+                .args(["branch", "-m", "main"])
+                .current_dir(&root)
+                .output()
+                .expect("git branch -m should run");
+            assert!(rename.status.success(), "git branch -m main should succeed");
+        }
+
+        run_command(&root, "git", &["config", "user.name", "Claw Tests"]);
+        run_command(&root, "git", &["config", "user.email", "claw@example.com"]);
+        fs::write(root.join("README.md"), "seed\n").expect("seed file");
+        run_command(&root, "git", &["add", "README.md"]);
+        run_command(&root, "git", &["commit", "-m", "chore: seed repo"]);
+        root
+    }
+
+    fn init_bare_repo(label: &str) -> PathBuf {
+        let root = temp_dir(label);
+        let output = Command::new("git")
+            .args(["init", "--bare"])
+            .arg(&root)
+            .output()
+            .expect("bare repo should initialize");
+        assert!(output.status.success(), "git init --bare should succeed");
+        root
+    }
+
+    #[cfg(unix)]
+    fn write_fake_gh(bin_dir: &Path, log_path: &Path, url: &str) {
+        fs::create_dir_all(bin_dir).expect("bin dir");
+        let script = format!(
+            "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then\n  echo 'gh 1.0.0'\n  exit 0\nfi\nprintf '%s\\n' \"$*\" >> \"{}\"\nif [ \"$1\" = \"pr\" ] && [ \"$2\" = \"create\" ]; then\n  echo '{}'\n  exit 0\nfi\nif [ \"$1\" = \"pr\" ] && [ \"$2\" = \"view\" ]; then\n  echo '{{\"url\":\"{}\"}}'\n  exit 0\nfi\nexit 0\n",
+            log_path.display(),
+            url,
+            url,
+        );
+        let path = bin_dir.join("gh");
+        fs::write(&path, script).expect("gh stub");
+        let mut permissions = fs::metadata(&path).expect("metadata").permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("chmod");
     }
 
     fn write_external_plugin(root: &Path, name: &str, version: &str) {
@@ -1293,7 +1823,28 @@ mod tests {
                 scope: Some("runtime".to_string())
             })
         );
+        assert_eq!(
+            SlashCommand::parse("/branch create feature/demo"),
+            Some(SlashCommand::Branch {
+                action: Some("create".to_string()),
+                target: Some("feature/demo".to_string()),
+            })
+        );
+        assert_eq!(
+            SlashCommand::parse("/worktree add ../demo wt-demo"),
+            Some(SlashCommand::Worktree {
+                action: Some("add".to_string()),
+                path: Some("../demo".to_string()),
+                branch: Some("wt-demo".to_string()),
+            })
+        );
         assert_eq!(SlashCommand::parse("/commit"), Some(SlashCommand::Commit));
+        assert_eq!(
+            SlashCommand::parse("/commit-push-pr ready for review"),
+            Some(SlashCommand::CommitPushPr {
+                context: Some("ready for review".to_string())
+            })
+        );
         assert_eq!(
             SlashCommand::parse("/pr ready for review"),
             Some(SlashCommand::Pr {
@@ -1418,7 +1969,10 @@ mod tests {
         assert!(help.contains("/status"));
         assert!(help.contains("/compact"));
         assert!(help.contains("/bughunter [scope]"));
+        assert!(help.contains("/branch [list|create <name>|switch <name>]"));
+        assert!(help.contains("/worktree [list|add <path> [branch]|remove <path>|prune]"));
         assert!(help.contains("/commit"));
+        assert!(help.contains("/commit-push-pr [context]"));
         assert!(help.contains("/pr [context]"));
         assert!(help.contains("/issue [context]"));
         assert!(help.contains("/ultraplan [task]"));
@@ -1442,7 +1996,7 @@ mod tests {
         assert!(help.contains("aliases: /plugins, /marketplace"));
         assert!(help.contains("/agents"));
         assert!(help.contains("/skills"));
-        assert_eq!(slash_command_specs().len(), 25);
+        assert_eq!(slash_command_specs().len(), 28);
         assert_eq!(resume_supported_slash_commands().len(), 13);
     }
 
@@ -1491,9 +2045,21 @@ mod tests {
         assert!(handle_slash_command("/unknown", &session, CompactionConfig::default()).is_none());
         assert!(handle_slash_command("/status", &session, CompactionConfig::default()).is_none());
         assert!(
+            handle_slash_command("/branch list", &session, CompactionConfig::default()).is_none()
+        );
+        assert!(
             handle_slash_command("/bughunter", &session, CompactionConfig::default()).is_none()
         );
+        assert!(
+            handle_slash_command("/worktree list", &session, CompactionConfig::default()).is_none()
+        );
         assert!(handle_slash_command("/commit", &session, CompactionConfig::default()).is_none());
+        assert!(handle_slash_command(
+            "/commit-push-pr review notes",
+            &session,
+            CompactionConfig::default()
+        )
+        .is_none());
         assert!(handle_slash_command("/pr", &session, CompactionConfig::default()).is_none());
         assert!(handle_slash_command("/issue", &session, CompactionConfig::default()).is_none());
         assert!(
@@ -1804,5 +2370,142 @@ mod tests {
 
         let _ = fs::remove_dir_all(config_home);
         let _ = fs::remove_dir_all(bundled_root);
+    }
+
+    #[test]
+    fn branch_and_worktree_commands_manage_git_state() {
+        // given
+        let repo = init_git_repo("branch-worktree");
+        let worktree_path = repo
+            .parent()
+            .expect("repo should have parent")
+            .join("branch-worktree-linked");
+
+        // when
+        let branch_list =
+            handle_branch_slash_command(Some("list"), None, &repo).expect("branch list succeeds");
+        let created = handle_branch_slash_command(Some("create"), Some("feature/demo"), &repo)
+            .expect("branch create succeeds");
+        let switched = handle_branch_slash_command(Some("switch"), Some("main"), &repo)
+            .expect("branch switch succeeds");
+        let added = handle_worktree_slash_command(
+            Some("add"),
+            Some(worktree_path.to_str().expect("utf8 path")),
+            Some("wt-demo"),
+            &repo,
+        )
+        .expect("worktree add succeeds");
+        let listed_worktrees =
+            handle_worktree_slash_command(Some("list"), None, None, &repo).expect("list succeeds");
+        let removed = handle_worktree_slash_command(
+            Some("remove"),
+            Some(worktree_path.to_str().expect("utf8 path")),
+            None,
+            &repo,
+        )
+        .expect("remove succeeds");
+
+        // then
+        assert!(branch_list.contains("main"));
+        assert!(created.contains("feature/demo"));
+        assert!(switched.contains("main"));
+        assert!(added.contains("wt-demo"));
+        assert!(listed_worktrees.contains(worktree_path.to_str().expect("utf8 path")));
+        assert!(removed.contains("Result           removed"));
+
+        let _ = fs::remove_dir_all(repo);
+        let _ = fs::remove_dir_all(worktree_path);
+    }
+
+    #[test]
+    fn commit_command_stages_and_commits_changes() {
+        // given
+        let repo = init_git_repo("commit-command");
+        fs::write(repo.join("notes.txt"), "hello\n").expect("write notes");
+
+        // when
+        let report =
+            handle_commit_slash_command("feat: add notes", &repo).expect("commit succeeds");
+        let status = run_command(&repo, "git", &["status", "--short"]);
+        let message = run_command(&repo, "git", &["log", "-1", "--pretty=%B"]);
+
+        // then
+        assert!(report.contains("Result           created"));
+        assert!(status.trim().is_empty());
+        assert_eq!(message.trim(), "feat: add notes");
+
+        let _ = fs::remove_dir_all(repo);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn commit_push_pr_command_commits_pushes_and_creates_pr() {
+        // given
+        let _guard = env_lock();
+        let repo = init_git_repo("commit-push-pr");
+        let remote = init_bare_repo("commit-push-pr-remote");
+        run_command(
+            &repo,
+            "git",
+            &[
+                "remote",
+                "add",
+                "origin",
+                remote.to_str().expect("utf8 remote"),
+            ],
+        );
+        run_command(&repo, "git", &["push", "-u", "origin", "main"]);
+        fs::write(repo.join("feature.txt"), "feature\n").expect("write feature file");
+
+        let fake_bin = temp_dir("fake-gh-bin");
+        let gh_log = fake_bin.join("gh.log");
+        write_fake_gh(&fake_bin, &gh_log, "https://example.com/pr/123");
+
+        let previous_path = env::var_os("PATH");
+        let mut new_path = fake_bin.display().to_string();
+        if let Some(path) = &previous_path {
+            new_path.push(':');
+            new_path.push_str(&path.to_string_lossy());
+        }
+        env::set_var("PATH", &new_path);
+        let previous_safeuser = env::var_os("SAFEUSER");
+        env::set_var("SAFEUSER", "tester");
+
+        let request = CommitPushPrRequest {
+            commit_message: Some("feat: add feature file".to_string()),
+            pr_title: "Add feature file".to_string(),
+            pr_body: "## Summary\n- add feature file".to_string(),
+            branch_name_hint: "Add feature file".to_string(),
+        };
+
+        // when
+        let report =
+            handle_commit_push_pr_slash_command(&request, &repo).expect("commit-push-pr succeeds");
+        let branch = run_command(&repo, "git", &["branch", "--show-current"]);
+        let message = run_command(&repo, "git", &["log", "-1", "--pretty=%B"]);
+        let gh_invocations = fs::read_to_string(&gh_log).expect("gh log should exist");
+
+        // then
+        assert!(report.contains("Result           created"));
+        assert!(report.contains("URL              https://example.com/pr/123"));
+        assert_eq!(branch.trim(), "tester/add-feature-file");
+        assert_eq!(message.trim(), "feat: add feature file");
+        assert!(gh_invocations.contains("pr create"));
+        assert!(gh_invocations.contains("--base main"));
+
+        if let Some(path) = previous_path {
+            env::set_var("PATH", path);
+        } else {
+            env::remove_var("PATH");
+        }
+        if let Some(safeuser) = previous_safeuser {
+            env::set_var("SAFEUSER", safeuser);
+        } else {
+            env::remove_var("SAFEUSER");
+        }
+
+        let _ = fs::remove_dir_all(repo);
+        let _ = fs::remove_dir_all(remote);
+        let _ = fs::remove_dir_all(fake_bin);
     }
 }

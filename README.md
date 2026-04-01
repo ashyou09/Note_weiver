@@ -48,6 +48,8 @@ The Rust port is a complete, working CLI (`claw`) with:
 - Session persistence and compaction
 - HTTP/SSE server (axum-based, direct connect sessions)
 - LSP client integration (diagnostics, go-to-definition, find-references)
+- Vim keybinding mode (normal/insert/visual/command)
+- Git slash commands (/branch, /commit, /commit-push-pr, /worktree)
 
 Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The cleanroom refactor, QA verification, git history rewrite, and CI setup were coordinated by **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw)), an AI assistant orchestrating the entire workflow. The Rust port passes all 274 tests across the workspace.
 
