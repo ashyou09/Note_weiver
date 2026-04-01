@@ -386,8 +386,7 @@ mod tests {
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create root");
         fs::write(root.join("CLAW.md"), "custom guidance\n").expect("write existing claw md");
-        fs::write(root.join(".gitignore"), ".claw/settings.local.json\n")
-            .expect("write gitignore");
+        fs::write(root.join(".gitignore"), ".claw/settings.local.json\n").expect("write gitignore");
 
         let first = initialize_repo(&root).expect("first init should succeed");
         assert!(first

@@ -1,5 +1,5 @@
 use crate::error::ApiError;
-use crate::providers::claw_provider::{self, ClawApiClient, AuthSource};
+use crate::providers::claw_provider::{self, AuthSource, ClawApiClient};
 use crate::providers::openai_compat::{self, OpenAiCompatClient, OpenAiCompatConfig};
 use crate::providers::{self, Provider, ProviderKind};
 use crate::types::{MessageRequest, MessageResponse, StreamEvent};

@@ -652,7 +652,7 @@ mod tests {
 
     use super::{
         now_unix_timestamp, oauth_token_is_expired, resolve_saved_oauth_token,
-        resolve_startup_auth_source, ClawApiClient, AuthSource, OAuthTokenSet,
+        resolve_startup_auth_source, AuthSource, ClawApiClient, OAuthTokenSet,
     };
     use crate::types::{ContentBlockDelta, MessageRequest};
 
