@@ -59,7 +59,7 @@ The **entire Rust port** was built by oh-my-opencode's **Sisyphus** agent in `ul
 
 > *"Oh My OpenCode Is Actually Insane"* — [YouTube - Darren Builds AI](https://www.youtube.com/watch?v=G_Snfh2M41M)
 
-**Credits:** [@code-yeongyu](https://github.com/code-yeongyu) (oh-my-opencode creator) · **Sisyphus** (autonomous coding agent) · **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw))
+**Credits:** [@code-yeongyu](https://github.com/code-yeongyu) (oh-my-opencode creator) · **Sisyphus** (autonomous coding agent) · **Jobdori**
 
 <p align="center"><code>npx oh-my-opencode@latest</code></p>
 
