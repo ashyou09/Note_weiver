@@ -33,47 +33,26 @@
 
 ---
 
-## Rust Port — Built with oh-my-opencode
+## Rust Port
 
-The entire Rust implementation under `rust/` was ported and engineered using [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by [@q_yeon_gyu_kim](https://x.com/q_yeon_gyu_kim) ([@code-yeongyu](https://github.com/code-yeongyu)) — an agent orchestration layer for [opencode](https://opencode.ai).
+The Rust workspace under `rust/` is the current systems-language port of the project.
 
-The Rust port is a complete, working CLI (`claw`) with:
-- Streaming API client with SSE support
-- Interactive REPL with markdown rendering
-- Tool execution (bash, file read/write/edit, search)
-- MCP (Model Context Protocol) stdio integration
-- Plugin system with hooks pipeline
-- CLAW.md project memory and config hierarchy
-- OAuth authentication flow
-- Session persistence and compaction
-- HTTP/SSE server (axum-based, direct connect sessions)
-- LSP client integration (diagnostics, go-to-definition, find-references)
-- Vim keybinding mode (normal/insert/visual/command)
-- Git slash commands (/branch, /commit, /commit-push-pr, /worktree)
+It currently includes:
 
-Every crate, every test, every commit was driven through oh-my-opencode's **Sisyphus** agent with `ultrawork` mode — from initial scaffolding to the final cleanroom pass. The cleanroom refactor, QA verification, git history rewrite, and CI setup were coordinated by **Jobdori** ([OpenClaw](https://github.com/openclaw/openclaw)), an AI assistant orchestrating the entire workflow. The Rust port passes all 274 tests across the workspace.
+- `crates/api-client` — API client with provider abstraction, OAuth, and streaming support
+- `crates/runtime` — session state, compaction, MCP orchestration, prompt construction
+- `crates/tools` — tool manifest definitions and execution framework
+- `crates/commands` — slash commands, skills discovery, and config inspection
+- `crates/plugins` — plugin model, hook pipeline, and bundled plugins
+- `crates/compat-harness` — compatibility layer for upstream editor integration
+- `crates/claw-cli` — interactive REPL, markdown rendering, and project bootstrap/init flows
+
+Run the Rust build:
 
 ```bash
-cd rust && cargo build --release
-./target/release/claw --help
+cd rust
+cargo build --release
 ```
-
----
-
-## Powered by Sisyphus
-
-> <a href="https://sisyphuslabs.ai"><img src="https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/.github/assets/sisyphus.png" height="300" /></a>
-> **Sisyphus is the agent that codes like your team. The Rust port was built entirely by Sisyphus in `ultrawork` mode.**
-> [**Join the waitlist**](https://sisyphuslabs.ai)
-
-> *"If Claude Code does in 7 days what a human does in 3 months, Sisyphus does it in 1 hour. It just works until the task is done."* — B, Quant Researcher
->
-> *"Hire @yeon_gyu_kim if you can convince him, this dude has revolutionized opencode."* — [mysticaltech](https://x.com/mysticaltech)
-
-[![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
-
----
 
 ## Backstory
 
@@ -205,12 +184,11 @@ python3 -m src.main tools --limit 10
 
 The port now mirrors the archived root-entry file surface, top-level subsystem names, and command/tool inventories much more closely than before. However, it is **not yet** a full runtime-equivalent replacement for the original TypeScript system; the Python tree still contains fewer executable runtime slices than the archived source.
 
-
 ## Built with `oh-my-codex` and `oh-my-opencode`
 
-This repository's porting, cleanroom hardening, and verification workflow was AI-assisted with Yeachan Heo's tooling stack:
+This repository's porting, cleanroom hardening, and verification workflow was AI-assisted with Yeachan Heo's tooling stack, with **oh-my-codex (OmX)** as the primary scaffolding and orchestration layer.
 
-- [**oh-my-codex (OmX)**](https://github.com/Yeachan-Heo/oh-my-codex) — primary scaffolding, orchestration, and core porting workflow
+- [**oh-my-codex (OmX)**](https://github.com/Yeachan-Heo/oh-my-codex) — main branch credit: primary scaffolding, orchestration, and core porting workflow
 - [**oh-my-opencode (OmO)**](https://github.com/instructkr/oh-my-opencode) — implementation acceleration, cleanup passes, and verification support
 
 Key workflow patterns used during the port:
