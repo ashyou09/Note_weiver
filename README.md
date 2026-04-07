@@ -1,4 +1,14 @@
+---
+title: NotesMaster AI
+emoji: 🎓
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # 🎓 NotesMaster AI
+
 
 <p align="center">
   <strong>AI-powered study notes generator — runs 100% locally, built on the claw-code harness infrastructure</strong>

@@ -5,3 +5,10 @@ archive/
 # Claude Code local artifacts
 .claude/settings.local.json
 .claude/sessions/
+# NotesMaster runtime dirs (generated at runtime)
+notesmaster/notes/*.html
+notesmaster/uploads/
+notesmaster/.sessions/
+.port_sessions/
+*.pyc
+.DS_Store

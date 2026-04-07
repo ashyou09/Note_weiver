@@ -3,656 +3,1422 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>NotesMaster AI</title>
+<title>NotesMaster AI — Smart Study Notes Generator</title>
+<meta name="description" content="Generate beautiful, structured study notes from any topic, text, or PDF using local AI. 100% private."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-/* ── tokens ── */
-:root{
-  --bg:#0c0c18;--bg1:#111122;--bg2:#181830;--bg3:#1f1f3a;
-  --border:rgba(120,100,255,.18);--border2:rgba(120,100,255,.35);
-  --accent:#7c6fff;--accent2:#a59bff;--accent3:#c4bcff;
-  --glow:rgba(124,111,255,.2);
-  --text:#eeeeff;--muted:#8888aa;--dim:#44446a;
-  --ok:#22c55e;--err:#ef4444;--warn:#f59e0b;
-  --r:14px;--r-sm:9px;
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════ */
+:root {
+  --bg:       #060612;
+  --bg1:      #0d0d20;
+  --bg2:      #121228;
+  --bg3:      #1a1a38;
+  --bg4:      #232347;
+
+  --accent:   #7c5cfc;
+  --accent2:  #a78bfa;
+  --accent3:  #c4b5fd;
+  --glow:     rgba(124,92,252,.28);
+  --glow2:    rgba(124,92,252,.12);
+
+  --teal:     #2dd4bf;
+  --pink:     #f472b6;
+  --amber:    #fbbf24;
+  --green:    #34d399;
+  --red:      #f87171;
+
+  --border:   rgba(124,92,252,.15);
+  --border2:  rgba(124,92,252,.3);
+  --border3:  rgba(255,255,255,.06);
+
+  --text:     #e2e0ff;
+  --text2:    #a09dc8;
+  --muted:    #6b6890;
+  --dim:      #3a3760;
+
+  --r:        16px;
+  --r-sm:     10px;
+  --r-xs:     6px;
+
+  --shadow:   0 8px 32px rgba(0,0,0,.45);
+  --shadow-sm:0 4px 16px rgba(0,0,0,.3);
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Inter',system-ui,sans-serif;
-          background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--accent);border-radius:10px}
 
-/* ── layout ── */
-.app{display:grid;grid-template-rows:62px 1fr;height:100vh;overflow:hidden}
-.topbar{display:flex;align-items:center;justify-content:space-between;
-        padding:0 28px;border-bottom:1px solid var(--border);
-        background:rgba(12,12,24,.92);backdrop-filter:blur(12px);z-index:50}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));
-            border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
-.brand-name{font-size:1.05rem;font-weight:700;letter-spacing:-.02em}
-.brand-v{font-size:.7rem;color:var(--muted);margin-top:1px}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.status-pill{display:flex;align-items:center;gap:7px;padding:5px 14px;
-             background:var(--bg1);border:1px solid var(--border);border-radius:20px;
-             font-size:.78rem;color:var(--muted)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:all .3s}
-.dot.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}
-.dot.err{background:var(--err)}
+html, body {
+  height: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow: hidden;
+}
 
-.body{display:grid;grid-template-columns:1fr 400px;overflow:hidden}
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; opacity: .5; }
 
-/* ═══ LEFT — input + history ═══ */
-.left-col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+/* ── Animated mesh background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,92,252,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(45,212,191,.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%, rgba(124,92,252,.05) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
 
-/* mode switcher */
-.mode-bar{display:flex;padding:14px 20px 0;gap:6px;flex-shrink:0}
-.mode-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--r-sm);
-          background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;
-          font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
-.mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;
-                 box-shadow:0 2px 12px var(--glow)}
-.mode-desc{padding:8px 20px 12px;font-size:.75rem;color:var(--muted);flex-shrink:0}
+/* ══════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════ */
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 64px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
 
-/* input area */
-.input-wrap{flex:1;padding:0 20px;display:flex;flex-direction:column;gap:10px;
-            overflow:hidden;min-height:0}
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border3);
+  background: rgba(6,6,18,.8);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+}
 
-/* drop zone */
-#drop-zone{flex:1;border:2px dashed var(--border2);border-radius:12px;
-           display:flex;flex-direction:column;align-items:center;justify-content:center;
-           gap:8px;cursor:pointer;transition:all .2s;color:var(--muted);
-           background:var(--bg1);text-align:center;padding:24px;min-height:160px}
-#drop-zone:hover,#drop-zone.over{border-color:var(--accent);color:var(--accent3);
-                                  background:rgba(124,111,255,.05)}
-#drop-zone .dz-icon{font-size:2.2rem;opacity:.7}
-#drop-zone .dz-title{font-size:.95rem;font-weight:600;color:var(--text)}
-#drop-zone .dz-sub{font-size:.79rem}
-#drop-zone input{display:none}
-#file-badge{display:none;align-items:center;gap:8px;padding:8px 14px;
-            background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.25);
-            border-radius:var(--r-sm);font-size:.82rem;color:var(--accent3)}
-#file-badge .fb-name{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#file-badge .fb-remove{cursor:pointer;color:var(--muted);font-size:1rem;transition:color .2s}
-#file-badge .fb-remove:hover{color:var(--err)}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-/* big textarea */
-textarea{width:100%;background:var(--bg1);border:1px solid var(--border);
-         border-radius:12px;color:var(--text);font-family:inherit;font-size:.92rem;
-         line-height:1.65;padding:16px 18px;resize:none;
-         transition:border-color .2s,box-shadow .2s;flex:1;min-height:0}
-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);outline:none}
-textarea::placeholder{color:var(--dim)}
-#topic-area{min-height:100px}
-#content-area{min-height:160px}
+.brand-logo {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 16px var(--glow);
+  flex-shrink: 0;
+}
 
-/* quick topic pills */
-.pill-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 4px;flex-shrink:0}
-.pill{padding:4px 12px;border:1px solid rgba(124,111,255,.25);border-radius:20px;
-      background:rgba(124,111,255,.07);color:var(--accent3);font-size:.76rem;
-      cursor:pointer;transition:all .18s;white-space:nowrap}
-.pill:hover{background:rgba(124,111,255,.2);border-color:var(--accent);color:#fff}
+.brand-text { display: flex; flex-direction: column; gap: 1px; }
+.brand-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, #fff 0%, var(--accent3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand-sub { font-size: .7rem; color: var(--muted); letter-spacing: .02em; }
 
-/* generate bar */
-.gen-bar{padding:14px 20px 16px;display:flex;gap:10px;flex-shrink:0;align-items:center}
-.btn-gen{flex:1;background:linear-gradient(135deg,var(--accent),#9b90ff);
-         border:none;border-radius:10px;color:#fff;font-family:inherit;
-         font-size:.95rem;font-weight:700;padding:13px;cursor:pointer;
-         transition:all .25s;box-shadow:0 4px 18px var(--glow);
-         display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-gen:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px);
-                               box-shadow:0 6px 24px var(--glow)}
-.btn-gen:disabled{opacity:.55;cursor:not-allowed;transform:none}
-.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
-         border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
-.spinner.on{display:block}
-@keyframes spin{to{transform:rotate(360deg)}}
-.btn-clear{padding:12px 16px;background:transparent;border:1px solid var(--border2);
-           border-radius:10px;color:var(--muted);font-family:inherit;font-size:.85rem;
-           cursor:pointer;transition:all .18s}
-.btn-clear:hover{background:rgba(124,111,255,.1);color:var(--text)}
+.topbar-right { display: flex; align-items: center; gap: 10px; }
 
-/* history panel */
-.history-section{border-top:1px solid var(--border);flex-shrink:0;max-height:190px;overflow-y:auto}
-.history-header{display:flex;align-items:center;justify-content:space-between;
-                padding:10px 20px 6px;font-size:.72rem;font-weight:700;
-                letter-spacing:.08em;text-transform:uppercase;color:var(--accent2)}
-.note-list{padding:0 12px 10px}
-.note-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;
-           cursor:pointer;transition:background .15s;font-size:.8rem}
-.note-item:hover{background:var(--bg1)}
-.note-item .ni-icon{font-size:1rem;flex-shrink:0}
-.note-item .ni-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.note-item .ni-ts{color:var(--muted);font-size:.72rem;flex-shrink:0}
-.note-item .ni-open{color:var(--accent2);font-size:.72rem;flex-shrink:0;text-decoration:none;
-                    padding:2px 6px;border:1px solid rgba(124,111,255,.25);border-radius:6px;transition:all .15s}
-.note-item .ni-open:hover{background:rgba(124,111,255,.15)}
+/* status pill */
+.status-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: .75rem;
+  color: var(--text2);
+  cursor: default;
+  transition: all .2s;
+}
+.status-pill:hover { border-color: var(--border2); }
+.pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dim);
+  transition: background .3s, box-shadow .3s;
+  flex-shrink: 0;
+}
+.pulse.ok { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse-ring 2s infinite; }
+.pulse.err { background: var(--red); }
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,.5); }
+  50% { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
+}
 
-/* ═══ RIGHT — output ═══ */
-.right-col{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+/* ── Main body ── */
+.main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  overflow: hidden;
+}
 
-.out-toolbar{display:flex;align-items:center;justify-content:space-between;
-             padding:10px 18px;border-bottom:1px solid var(--border);
-             background:var(--bg1);flex-shrink:0;gap:10px}
-.view-tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);
-           border-radius:var(--r-sm);padding:3px}
-.vtab{padding:5px 14px;border-radius:6px;font-size:.79rem;font-weight:500;
-      color:var(--muted);cursor:pointer;transition:all .18s;user-select:none}
-.vtab.active{background:var(--accent);color:#fff}
-.out-status{font-size:.74rem;font-family:'JetBrains Mono',monospace;color:var(--muted);
-            flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ══════════════════════════════════════════════
+   LEFT PANEL
+══════════════════════════════════════════════ */
+.left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border3);
+  background: rgba(13,13,32,.6);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
 
-/* progress */
-.prog-wrap{height:2px;background:transparent;flex-shrink:0}
-.prog{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent3));
-      transition:width .12s linear;border-radius:2px}
-@keyframes prog-pulse{0%,100%{opacity:1}50%{opacity:.6}}
-.prog.animating{animation:prog-pulse 1.4s infinite}
+/* ── Mode Switcher ── */
+.mode-switcher {
+  padding: 16px 16px 0;
+  flex-shrink: 0;
+}
 
-/* output panels */
-.out-area{flex:1;position:relative;overflow:hidden}
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 4px;
+}
 
-/* placeholder */
-#ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:14px;background:var(--bg);padding:24px}
-.ph-icon{font-size:3rem;animation:float 3.5s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.ph-title{font-size:1.05rem;font-weight:700;color:var(--accent2)}
-.ph-sub{font-size:.83rem;color:var(--muted);text-align:center;max-width:300px;line-height:1.5}
-.ph-pills{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:6px}
-.ph-pill{padding:4px 11px;background:rgba(124,111,255,.1);border:1px solid var(--border);
-         color:var(--accent3);border-radius:20px;font-size:.73rem}
+.mode-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-radius: var(--r-xs);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .03em;
+}
+.mode-tab .tab-icon { font-size: 1.1rem; }
+.mode-tab:hover { color: var(--text2); background: rgba(255,255,255,.04); }
+.mode-tab.active {
+  background: linear-gradient(135deg, var(--accent), #9b6dff);
+  color: #fff;
+  box-shadow: 0 2px 12px var(--glow);
+}
 
-/* live streaming output */
-#stream-box{position:absolute;inset:0;overflow-y:auto;padding:20px;display:none;
-            background:var(--bg);font-family:'JetBrains Mono',monospace;
-            font-size:.78rem;color:#cdd6f4;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.mode-hint {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: rgba(124,92,252,.07);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: .73rem;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.mode-hint strong { color: var(--accent3); }
 
-/* iframe preview */
-#preview{position:absolute;inset:0;border:none;width:100%;height:100%;display:none;background:#fff}
+/* ── Input Panels ── */
+.input-area {
+  flex: 1;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  min-height: 0;
+}
 
-/* raw HTML view */
-#raw-view{position:absolute;inset:0;overflow:auto;background:#0a0a14;display:none}
-#raw-code{padding:20px;font-family:'JetBrains Mono',monospace;font-size:.77rem;
-          color:#cdd6f4;white-space:pre-wrap;word-break:break-all;line-height:1.65}
+/* Topic panel */
+#panel-topic { display: flex; flex-direction: column; gap: 10px; height: 100%; }
 
-/* action btns */
-.out-actions{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);
-             flex-shrink:0;background:var(--bg1)}
-.act-btn{padding:7px 14px;background:transparent;border:1px solid var(--border2);
-         border-radius:var(--r-sm);color:var(--muted);font-family:inherit;font-size:.79rem;
-         cursor:pointer;transition:all .18s;text-decoration:none;display:inline-flex;
-         align-items:center;gap:5px}
-.act-btn:hover{background:rgba(124,111,255,.1);color:var(--text);border-color:var(--accent2)}
-.act-btn.primary{background:rgba(124,111,255,.15);color:var(--accent3);border-color:var(--accent2)}
-#out-actions{display:none}
+.section-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
-/* toast */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
-       background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
-       color:var(--text);padding:10px 20px;font-size:.84rem;
-       box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transition:all .3s ease;z-index:9999}
-#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+textarea {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .88rem;
+  line-height: 1.7;
+  padding: 14px 16px;
+  resize: none;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+  flex: 1;
+  min-height: 0;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg3);
+  box-shadow: 0 0 0 3px var(--glow2);
+}
+textarea::placeholder { color: var(--dim); line-height: 1.8; }
 
-/* modal confirmation for long content */
-.char-info{font-size:.74rem;color:var(--muted);padding:0 20px 4px;flex-shrink:0}
+/* Quick topics grid */
+.quick-topics {
+  flex-shrink: 0;
+}
+.quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.q-pill {
+  padding: 4px 10px;
+  background: rgba(124,92,252,.08);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--accent3);
+  font-size: .71rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+  user-select: none;
+}
+.q-pill:hover {
+  background: rgba(124,92,252,.2);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Paste panel */
+#panel-paste { display: none; flex-direction: column; gap: 8px; height: 100%; }
+.char-count {
+  font-size: .71rem;
+  color: var(--muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+.char-count.warn { color: var(--amber); }
+
+/* Upload panel */
+#panel-upload { display: none; flex-direction: column; gap: 10px; }
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 180px;
+  border: 2px dashed var(--border2);
+  border-radius: var(--r);
+  background: var(--bg2);
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+  padding: 28px;
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--accent);
+  background: rgba(124,92,252,.06);
+  box-shadow: 0 0 30px rgba(124,92,252,.1);
+}
+.dz-icon { font-size: 2.8rem; opacity: .7; transition: transform .2s; }
+.drop-zone:hover .dz-icon { transform: translateY(-4px); }
+.dz-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+.dz-sub { font-size: .75rem; color: var(--muted); }
+.dz-types {
+  display: flex; gap: 6px;
+}
+.dz-badge {
+  padding: 2px 8px;
+  background: rgba(124,92,252,.12);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--accent3);
+  letter-spacing: .05em;
+}
+#file-input { display: none; }
+
+.file-card {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(124,92,252,.1);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  box-shadow: 0 0 20px rgba(124,92,252,.15);
+}
+.file-icon { font-size: 1.6rem; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name {
+  font-size: .84rem;
+  font-weight: 600;
+  color: var(--accent3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-meta { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+.file-remove {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1.1rem;
+  transition: color .18s;
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+.file-remove:hover { color: var(--red); background: rgba(248,113,113,.1); }
+
+.upload-success {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(52,211,153,.08);
+  border: 1px solid rgba(52,211,153,.25);
+  border-radius: var(--r-xs);
+  font-size: .76rem;
+  color: var(--green);
+}
+
+/* ── Generate bar ── */
+.gen-bar {
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border3);
+  background: rgba(6,6,18,.4);
+}
+
+.model-select-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+.model-select-wrapper::after {
+  content: '▾';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  font-size: .75rem;
+}
+#model-sel {
+  appearance: none;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text2);
+  font-family: inherit;
+  font-size: .78rem;
+  padding: 9px 28px 9px 12px;
+  cursor: pointer;
+  transition: border-color .2s;
+  outline: none;
+}
+#model-sel:hover, #model-sel:focus { border-color: var(--accent); }
+
+.btn-generate {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: linear-gradient(135deg, #7c5cfc 0%, #9b6dff 50%, #6eaafb 100%);
+  background-size: 200% auto;
+  border: none;
+  border-radius: var(--r-sm);
+  color: #fff;
+  font-family: 'Outfit', inherit;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .3s ease;
+  box-shadow: 0 4px 20px var(--glow);
+  letter-spacing: .02em;
+}
+.btn-generate:hover:not(:disabled) {
+  background-position: right center;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px var(--glow);
+}
+.btn-generate:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-generate:active:not(:disabled) { transform: translateY(0); }
+
+.spin {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+.spin.on { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-clear {
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .18s;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.btn-clear:hover { border-color: var(--red); color: var(--red); background: rgba(248,113,113,.07); }
+
+/* ── History ── */
+.history {
+  border-top: 1px solid var(--border3);
+  flex-shrink: 0;
+  max-height: 185px;
+  display: flex;
+  flex-direction: column;
+}
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+.history-title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent2);
+}
+.history-count { font-size: .7rem; color: var(--muted); }
+.history-list {
+  overflow-y: auto;
+  padding: 0 10px 10px;
+  flex: 1;
+}
+.note-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: background .15s;
+}
+.note-row:hover { background: rgba(124,92,252,.08); }
+.note-row .nr-icon { font-size: .9rem; flex-shrink: 0; }
+.note-row .nr-name {
+  flex: 1;
+  font-size: .77rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.note-row .nr-ts { font-size: .68rem; color: var(--muted); flex-shrink: 0; }
+.note-row .nr-link {
+  font-size: .68rem;
+  color: var(--accent2);
+  text-decoration: none;
+  padding: 2px 7px;
+  border: 1px solid rgba(124,92,252,.2);
+  border-radius: 5px;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.note-row .nr-link:hover { background: rgba(124,92,252,.15); }
+
+/* ══════════════════════════════════════════════
+   RIGHT PANEL — OUTPUT
+══════════════════════════════════════════════ */
+.right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Output toolbar ── */
+.out-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border3);
+  background: rgba(13,13,32,.7);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 3px;
+}
+.vtab {
+  padding: 5px 14px;
+  border-radius: var(--r-xs);
+  font-size: .76rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .18s;
+  user-select: none;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+.vtab:hover { color: var(--text2); }
+.vtab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--glow); }
+
+.out-status {
+  flex: 1;
+  font-size: .74rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Progress bar */
+.progress-track {
+  height: 2px;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  border-radius: 2px;
+  transition: width .15s ease;
+}
+.progress-fill.active {
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+
+/* ── Output area ── */
+.out-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Placeholder */
+#placeholder {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px;
+}
+.ph-icon {
+  font-size: 4rem;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(124,92,252,.4));
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(2deg); }
+}
+.ph-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, var(--accent3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+.ph-body {
+  font-size: .85rem;
+  color: var(--text2);
+  text-align: center;
+  max-width: 360px;
+  line-height: 1.7;
+}
+.ph-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 500px;
+  width: 100%;
+  margin-top: 6px;
+}
+.ph-step {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 10px;
+  background: rgba(124,92,252,.07);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  text-align: center;
+  transition: all .2s;
+}
+.ph-step:hover { border-color: var(--border2); background: rgba(124,92,252,.12); }
+.ph-step-num {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--teal));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; color: #fff;
+}
+.ph-step span { font-size: .74rem; color: var(--text2); line-height: 1.4; }
+
+/* Stream box */
+#stream-box {
+  position: absolute; inset: 0;
+  display: none;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--bg);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .76rem;
+  color: #cdd6f4;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Preview iframe */
+#preview-frame {
+  position: absolute; inset: 0;
+  display: none;
+  border: none;
+  width: 100%; height: 100%;
+  background: #fff;
+}
+
+/* Raw HTML view */
+#raw-view {
+  position: absolute; inset: 0;
+  display: none;
+  overflow: auto;
+  background: var(--bg1);
+}
+#raw-code {
+  padding: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .75rem;
+  color: #cdd6f4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.7;
+}
+
+/* ── Output actions ── */
+.out-actions {
+  display: none;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border3);
+  background: rgba(13,13,32,.7);
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text2);
+  font-family: inherit;
+  font-size: .77rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .18s;
+}
+.btn-action:hover {
+  background: rgba(124,92,252,.1);
+  border-color: var(--accent2);
+  color: var(--text);
+}
+.btn-action.primary {
+  background: rgba(124,92,252,.15);
+  border-color: var(--accent);
+  color: var(--accent3);
+}
+.btn-action.primary:hover { background: rgba(124,92,252,.25); }
+
+.out-actions-spacer { flex: 1; }
+.note-badge {
+  font-size: .7rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+/* ══════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════ */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  padding: 10px 22px;
+  font-size: .84rem;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════
+   EMPTY STATE for history
+══════════════════════════════════════════════ */
+.no-notes {
+  padding: 10px 16px;
+  font-size: .77rem;
+  color: var(--muted);
+  font-style: italic;
+}
 </style>
 </head>
 <body>
 <div class="app">
 
 <!-- ══ TOPBAR ══ -->
-<div class="topbar">
+<header class="topbar">
   <div class="brand">
-    <div class="brand-icon">🎓</div>
-    <div>
+    <div class="brand-logo">🎓</div>
+    <div class="brand-text">
       <div class="brand-name">NotesMaster AI</div>
-      <div class="brand-v">Qwen3.5 · claw infrastructure · 100% local</div>
+      <div class="brand-sub">Powered by Qwen · 100% local &amp; private</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <div class="topbar-right">
     <div class="status-pill">
-      <div class="dot" id="dot"></div>
-      <span id="status-txt">Checking…</span>
+      <div class="pulse" id="pulse"></div>
+      <span id="status-txt">Connecting…</span>
     </div>
   </div>
-</div>
+</header>
 
-<!-- ══ BODY ══ -->
-<div class="body">
+<!-- ══ MAIN ══ -->
+<div class="main">
 
-  <!-- ═══ LEFT ═══ -->
-  <div class="left-col">
+  <!-- ═══ LEFT PANEL ═══ -->
+  <aside class="left">
 
-    <!-- mode switch -->
-    <div class="mode-bar">
-      <button class="mode-btn active" id="m-topic"   onclick="setMode('topic')">📝 Type a Topic</button>
-      <button class="mode-btn"        id="m-paste"   onclick="setMode('paste')">📋 Paste Content</button>
-      <button class="mode-btn"        id="m-upload"  onclick="setMode('upload')">📁 Upload PDF / File</button>
+    <!-- Mode Switcher -->
+    <div class="mode-switcher">
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tab-topic" onclick="setMode('topic')">
+          <span class="tab-icon">✏️</span>
+          <span>Topic</span>
+        </button>
+        <button class="mode-tab" id="tab-paste" onclick="setMode('paste')">
+          <span class="tab-icon">📋</span>
+          <span>Paste</span>
+        </button>
+        <button class="mode-tab" id="tab-upload" onclick="setMode('upload')">
+          <span class="tab-icon">📁</span>
+          <span>Upload</span>
+        </button>
+      </div>
+      <div class="mode-hint" id="mode-hint">
+        <strong>Topic mode</strong> — type any subject and AI builds complete notes from scratch.
+      </div>
     </div>
-    <div class="mode-desc" id="mode-desc">
-      Type any subject, concept, or question — AI builds complete notes from scratch.
-    </div>
 
-    <!-- input area (dynamic) -->
-    <div class="input-wrap" id="input-wrap">
+    <!-- Input Panels -->
+    <div class="input-area">
 
-      <!-- TOPIC mode -->
+      <!-- TOPIC -->
       <div id="panel-topic">
+        <div class="section-label">What do you want to learn?</div>
         <textarea id="topic-area" rows="5"
-          placeholder="Type your topic here…
-
-Examples:
-• Python Decorators and Closures
-• How does TCP/IP work internally?
-• Gradient Descent — intuition to math
-• SOLID Principles in OOP
-• How Black Holes form
-
-Press Ctrl+Enter to generate"></textarea>
-        <div class="pill-row" style="margin-top:8px">
-          <span class="pill" onclick="setTopic(this)">Python Decorators</span>
-          <span class="pill" onclick="setTopic(this)">Transformer Attention</span>
-          <span class="pill" onclick="setTopic(this)">Gradient Descent</span>
-          <span class="pill" onclick="setTopic(this)">TCP/IP Networking</span>
-          <span class="pill" onclick="setTopic(this)">SQL Window Functions</span>
-          <span class="pill" onclick="setTopic(this)">Binary Search Tree</span>
-          <span class="pill" onclick="setTopic(this)">SOLID Principles</span>
-          <span class="pill" onclick="setTopic(this)">Dynamic Programming</span>
-          <span class="pill" onclick="setTopic(this)">React useEffect</span>
-          <span class="pill" onclick="setTopic(this)">Docker & Containers</span>
-          <span class="pill" onclick="setTopic(this)">OS Process Scheduling</span>
-          <span class="pill" onclick="setTopic(this)">Backpropagation</span>
+          placeholder="Enter a topic, concept, or question…&#10;&#10;Examples:&#10;• Python Decorators and Closures&#10;• How TCP/IP works internally&#10;• Gradient Descent — intuition to math&#10;&#10;Press Ctrl+Enter or ⌘+Enter to generate"
+        ></textarea>
+        <div class="quick-topics">
+          <div class="section-label">Quick topics</div>
+          <div class="quick-grid">
+            <span class="q-pill" onclick="useTopic(this)">Python Decorators</span>
+            <span class="q-pill" onclick="useTopic(this)">Transformer Attention</span>
+            <span class="q-pill" onclick="useTopic(this)">Gradient Descent</span>
+            <span class="q-pill" onclick="useTopic(this)">TCP/IP Networking</span>
+            <span class="q-pill" onclick="useTopic(this)">SQL Window Functions</span>
+            <span class="q-pill" onclick="useTopic(this)">Binary Search Tree</span>
+            <span class="q-pill" onclick="useTopic(this)">SOLID Principles</span>
+            <span class="q-pill" onclick="useTopic(this)">Dynamic Programming</span>
+            <span class="q-pill" onclick="useTopic(this)">React Hooks</span>
+            <span class="q-pill" onclick="useTopic(this)">Docker Containers</span>
+            <span class="q-pill" onclick="useTopic(this)">Backpropagation</span>
+            <span class="q-pill" onclick="useTopic(this)">OS Scheduling</span>
+          </div>
         </div>
       </div>
 
-      <!-- PASTE mode -->
-      <div id="panel-paste" style="display:none;height:100%;display:none;flex-direction:column;gap:4px">
-        <div class="char-info" id="char-info">0 characters</div>
+      <!-- PASTE -->
+      <div id="panel-paste" style="display:none;flex-direction:column;gap:8px;height:100%">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="section-label">Paste your content</div>
+          <div class="char-count" id="char-count">0 chars</div>
+        </div>
         <textarea id="content-area" style="flex:1"
-          placeholder="Paste any text here to convert into structured notes:
-
-• Lecture slides content
-• Book chapter or article
-• Research paper excerpt
-• YouTube transcript
-• Meeting notes
-• Any raw information
-
-AI will organize everything into a proper study guide."></textarea>
+          placeholder="Paste any raw text here:&#10;&#10;• Lecture slides or notes&#10;• Book chapter or article&#10;• YouTube transcript&#10;• Research paper excerpt&#10;• Meeting notes&#10;&#10;AI will organize everything into a structured study guide."
+        ></textarea>
+        <div class="section-label" id="paste-warn" style="display:none; color:var(--amber)">⚠️ Content will be trimmed to 8,000 characters</div>
       </div>
 
-      <!-- UPLOAD mode -->
-      <div id="panel-upload" style="display:none">
-        <div id="drop-zone">
+      <!-- UPLOAD -->
+      <div id="panel-upload" style="display:none;flex-direction:column;gap:10px">
+        <div class="section-label">Upload a file</div>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
           <input type="file" id="file-input" accept=".pdf,.txt,.md,.doc"/>
           <div class="dz-icon">📄</div>
-          <div class="dz-title">Drop your file here</div>
-          <div class="dz-sub">Supports PDF, TXT, MD · Click to browse</div>
+          <div class="dz-title">Drop file here or click to browse</div>
+          <div class="dz-sub">AI extracts and structures all content</div>
+          <div class="dz-types">
+            <span class="dz-badge">PDF</span>
+            <span class="dz-badge">TXT</span>
+            <span class="dz-badge">MD</span>
+          </div>
         </div>
-        <div id="file-badge">
-          <span>📎</span>
-          <span class="fb-name" id="fb-name">—</span>
-          <span class="char-info" id="fb-chars" style="padding:0"></span>
-          <span class="fb-remove" onclick="clearFile()">✕</span>
+        <div class="file-card" id="file-card">
+          <span class="file-icon">📎</span>
+          <div class="file-info">
+            <div class="file-name" id="file-name">—</div>
+            <div class="file-meta" id="file-meta">—</div>
+          </div>
+          <button class="file-remove" onclick="clearFile()">✕</button>
         </div>
-        <div id="upload-hint" style="font-size:.78rem;color:var(--muted);margin-top:8px;display:none">
-          ✅ File extracted. Click Generate Notes to create your study guide.
+        <div class="upload-success" id="upload-success">
+          ✅ File ready — click <strong style="color:#fff">Generate Notes</strong> below
         </div>
       </div>
 
-    </div><!-- /input-wrap -->
+    </div><!-- /input-area -->
 
-    <!-- model + generate -->
+    <!-- Generate bar -->
     <div class="gen-bar">
-      <select id="model-sel" style="background:var(--bg1);border:1px solid var(--border);
-              border-radius:var(--r-sm);color:var(--text);font-family:inherit;
-              font-size:.82rem;padding:8px 10px;cursor:pointer">
-        <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
-        <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
-        <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
-        <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
-      </select>
-      <button class="btn-gen" id="gen-btn" onclick="generate()">
-        <div class="spinner" id="spinner"></div>
+      <div class="model-select-wrapper">
+        <select id="model-sel">
+          <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
+          <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
+          <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
+          <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
+          <option value="Qwen/Qwen2.5-7B-Instruct">HF Qwen2.5-7B ☁️</option>
+        </select>
+      </div>
+      <button class="btn-generate" id="gen-btn" onclick="generate()">
+        <div class="spin" id="spin"></div>
         <span id="gen-label">✨ Generate Notes</span>
       </button>
-      <button class="btn-clear" onclick="clearAll()">✕</button>
+      <button class="btn-clear" id="clear-btn" onclick="clearAll()" title="Clear all">✕</button>
     </div>
 
-    <!-- history -->
-    <div class="history-section">
-      <div class="history-header">
-        <span>📂 Recent Notes</span>
-        <span id="hist-count" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">—</span>
+    <!-- History -->
+    <div class="history">
+      <div class="history-head">
+        <div class="history-title">📂 Recent Notes</div>
+        <div class="history-count" id="history-count">—</div>
       </div>
-      <div class="note-list" id="note-list">
-        <div style="padding:6px 8px;font-size:.79rem;color:var(--muted)">No notes yet</div>
+      <div class="history-list" id="history-list">
+        <div class="no-notes">No notes yet — generate your first!</div>
       </div>
     </div>
 
-  </div><!-- /left-col -->
+  </aside><!-- /left -->
 
-  <!-- ═══ RIGHT ═══ -->
-  <div class="right-col">
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <main class="right">
 
-    <div class="out-toolbar">
+    <div class="out-bar">
       <div class="view-tabs">
-        <div class="vtab active" onclick="setView('preview')">🖥 Preview</div>
-        <div class="vtab"        onclick="setView('stream')">⚡ Live</div>
-        <div class="vtab"        onclick="setView('raw')">📋 HTML</div>
+        <button class="vtab active" onclick="setView('preview')">🖥 Preview</button>
+        <button class="vtab"        onclick="setView('stream')">⚡ Live</button>
+        <button class="vtab"        onclick="setView('raw')">📋 HTML</button>
       </div>
-      <div class="out-status" id="out-status">Ready — choose a mode and generate notes</div>
+      <div class="out-status" id="out-status">Ready — choose a mode and generate</div>
     </div>
 
-    <div class="prog-wrap"><div class="prog" id="prog"></div></div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress"></div>
+    </div>
 
     <div class="out-area">
-      <!-- placeholder -->
-      <div id="ph">
+
+      <!-- Placeholder -->
+      <div id="placeholder">
         <div class="ph-icon">🎓</div>
-        <div class="ph-title">NotesMaster AI</div>
-        <div class="ph-sub">Generate structured study notes from any topic, pasted content, or uploaded file</div>
-        <div class="ph-pills">
-          <span class="ph-pill">✔ Any subject</span>
-          <span class="ph-pill">✔ PDF / text input</span>
-          <span class="ph-pill">✔ 13-step flow</span>
-          <span class="ph-pill">✔ Code + diagrams</span>
-          <span class="ph-pill">✔ 100% local</span>
+        <div class="ph-title">Your AI Study Notes Generator</div>
+        <div class="ph-body">
+          Generate beautifully structured, in-depth study notes from any topic, text, or PDF — powered by local AI.
+        </div>
+        <div class="ph-steps">
+          <div class="ph-step">
+            <div class="ph-step-num">1</div>
+            <span>Choose a mode: Topic, Paste, or Upload</span>
+          </div>
+          <div class="ph-step">
+            <div class="ph-step-num">2</div>
+            <span>Select your model and click Generate</span>
+          </div>
+          <div class="ph-step">
+            <div class="ph-step-num">3</div>
+            <span>Watch AI build your notes in real time</span>
+          </div>
         </div>
       </div>
-      <!-- live stream text -->
+
+      <!-- Live stream -->
       <div id="stream-box"></div>
-      <!-- iframe preview -->
-      <iframe id="preview" title="Note preview" sandbox="allow-same-origin"></iframe>
-      <!-- raw html -->
+
+      <!-- Rendered preview -->
+      <iframe id="preview-frame" title="Notes preview" sandbox="allow-same-origin"></iframe>
+
+      <!-- Raw HTML -->
       <div id="raw-view"><pre id="raw-code"></pre></div>
-    </div>
 
+    </div><!-- /out-area -->
+
+    <!-- Action bar (shown after generation) -->
     <div class="out-actions" id="out-actions">
-      <button class="act-btn primary" onclick="copyHtml()">📋 Copy HTML</button>
-      <a class="act-btn"   id="dl-btn"   href="#" download>⬇ Download</a>
-      <a class="act-btn"   id="open-btn" href="#" target="_blank">🔗 Open in Browser</a>
+      <button class="btn-action primary" onclick="copyHtml()">📋 Copy HTML</button>
+      <a class="btn-action" id="dl-btn" href="#" download>⬇ Download</a>
+      <a class="btn-action" id="open-btn" href="#" target="_blank">🔗 Open Tab</a>
+      <div class="out-actions-spacer"></div>
+      <div class="note-badge" id="note-badge"></div>
     </div>
 
-  </div><!-- /right-col -->
-</div><!-- /body -->
+  </main><!-- /right -->
+
+</div><!-- /main -->
 </div><!-- /app -->
 
 <div id="toast"></div>
 
 <script>
-/* ─── state ─── */
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
 const S = {
-  mode:'topic',       // topic | paste | upload
-  model:'qwen3.5:4b',
-  view:'preview',
-  html:'',
-  noteFile:null,
-  fileContent:'',
-  fileName:'',
-  generating:false,
-  sessionId:null,
+  mode: 'topic',
+  model: 'qwen3.5:4b',
+  view: 'preview',
+  html: '',
+  noteFile: null,
+  fileContent: '',
+  fileName: '',
+  generating: false,
+  sessionId: null,
 };
 
-/* ─── utils ─── */
-const $=id=>document.getElementById(id);
-function toast(m,d=3200){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
-function setStatus(m,c=''){$('out-status').textContent=m;$('out-status').style.color=c||''}
-function setProg(p){const el=$('prog');el.style.width=p+'%';
-  if(p>0&&p<100)el.classList.add('animating');else el.classList.remove('animating');
-  if(p>=100)setTimeout(()=>{el.style.width='0';},700)}
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const $$ = s => document.querySelectorAll(s);
 
-/* ─── mode ─── */
-const MODE_DESC={
-  topic:'Type any subject, concept, or question — AI builds complete structured notes from scratch.',
-  paste:'Paste any raw text — articles, lecture notes, transcripts, book chapters — AI converts it into organized study notes.',
-  upload:'Upload a PDF or text file — AI extracts the content and creates a complete structured study guide from it.'
-};
-function setMode(m){
-  S.mode=m;
-  ['topic','paste','upload'].forEach(x=>{
-    $('m-'+x).classList.toggle('active',x===m);
-    $('panel-'+x).style.display=x===m?(m==='paste'?'flex':'block'):'none';
-  });
-  $('mode-desc').textContent=MODE_DESC[m];
+let toastTimer;
+function toast(msg, duration = 3000) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
-// fix paste panel display
-$('panel-paste').style.cssText='display:none;flex-direction:column;gap:4px;height:100%';
-$('panel-upload').style.display='none';
-$('panel-topic').style.display='block';
 
-/* ─── char counter ─── */
-$('content-area').addEventListener('input',()=>{
-  const n=$('content-area').value.length;
-  $('char-info').textContent=n.toLocaleString()+' characters'+(n>8000?' (will be truncated to 8000)':'');
+function setStatus(msg, color = '') {
+  $('out-status').textContent = msg;
+  $('out-status').style.color = color || '';
+}
+
+function setProgress(pct) {
+  const el = $('progress');
+  el.style.width = pct + '%';
+  pct > 0 && pct < 100 ? el.classList.add('active') : el.classList.remove('active');
+  if (pct >= 100) setTimeout(() => { el.style.width = '0'; }, 800);
+}
+
+/* ══════════════════════════════════════════════
+   MODE
+══════════════════════════════════════════════ */
+const HINTS = {
+  topic:  '<strong>Topic mode</strong> — type any subject and AI builds complete notes from scratch.',
+  paste:  '<strong>Paste mode</strong> — paste raw text and AI converts it into an organized study guide.',
+  upload: '<strong>Upload mode</strong> — drop a PDF/TXT/MD and AI extracts and structures all content.',
+};
+
+function setMode(m) {
+  S.mode = m;
+  ['topic', 'paste', 'upload'].forEach(x => {
+    $('tab-' + x).classList.toggle('active', x === m);
+    const p = $('panel-' + x);
+    if (x === m) {
+      p.style.display = 'flex';
+      p.style.flexDirection = 'column';
+      if (x === 'topic' || x === 'upload') p.style.gap = '10px';
+    } else {
+      p.style.display = 'none';
+    }
+  });
+  $('mode-hint').innerHTML = HINTS[m];
+}
+
+/* ══════════════════════════════════════════════
+   QUICK TOPICS
+══════════════════════════════════════════════ */
+function useTopic(el) {
+  $('topic-area').value = el.textContent;
+  $('topic-area').focus();
+  setMode('topic');
+}
+
+/* ══════════════════════════════════════════════
+   CHAR COUNTER
+══════════════════════════════════════════════ */
+$('content-area').addEventListener('input', () => {
+  const n = $('content-area').value.length;
+  const cc = $('char-count');
+  cc.textContent = n.toLocaleString() + ' chars';
+  cc.className = 'char-count' + (n > 8000 ? ' warn' : '');
+  $('paste-warn').style.display = n > 8000 ? '' : 'none';
 });
 
-/* ─── quick pills ─── */
-function setTopic(el){$('topic-area').value=el.textContent;$('topic-area').focus()}
+/* ══════════════════════════════════════════════
+   FILE UPLOAD
+══════════════════════════════════════════════ */
+const dz = $('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  handleFile(e.dataTransfer.files[0]);
+});
+$('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
 
-/* ─── file upload ─── */
-const dz=$('drop-zone');
-dz.addEventListener('click',()=>$('file-input').click());
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFile(e.dataTransfer.files[0])});
-$('file-input').addEventListener('change',e=>handleFile(e.target.files[0]));
-
-async function handleFile(f){
-  if(!f)return;
-  setStatus('📤 Uploading '+f.name+'…');
-  const fd=new FormData();fd.append('file',f);
-  try{
-    const r=await fetch('/api/upload',{method:'POST',body:fd});
-    const d=await r.json();
-    if(d.error){toast('❌ '+d.error);return}
-    S.fileContent=d.text;
-    S.fileName=d.name;
-    $('fb-name').textContent=d.name;
-    $('fb-chars').textContent=d.chars.toLocaleString()+' chars';
-    $('file-badge').style.display='flex';
-    dz.style.display='none';
-    $('upload-hint').style.display='block';
-    setStatus('✅ '+d.name+' ready ('+d.chars.toLocaleString()+' chars)');
-    toast('✅ '+d.name+' loaded');
-  }catch(e){toast('❌ Upload failed: '+e.message)}
+async function handleFile(f) {
+  if (!f) return;
+  setStatus('📤 Processing ' + f.name + '…');
+  const fd = new FormData(); fd.append('file', f);
+  try {
+    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { toast('❌ ' + d.error); return; }
+    S.fileContent = d.text;
+    S.fileName = d.name;
+    $('file-name').textContent = d.name;
+    $('file-meta').textContent = d.chars.toLocaleString() + ' characters extracted';
+    $('file-card').style.display = 'flex';
+    dz.style.display = 'none';
+    $('upload-success').style.display = 'flex';
+    setStatus('✅ ' + d.name + ' ready (' + d.chars.toLocaleString() + ' chars)');
+    toast('✅ ' + d.name + ' loaded!');
+  } catch (e) {
+    toast('❌ Upload failed: ' + e.message);
+    setStatus('❌ Upload failed', 'var(--red)');
+  }
 }
 
-function clearFile(){
-  S.fileContent='';S.fileName='';
-  $('file-badge').style.display='none';
-  $('upload-hint').style.display='none';
-  dz.style.display='flex';
-  $('file-input').value='';
+function clearFile() {
+  S.fileContent = ''; S.fileName = '';
+  $('file-card').style.display = 'none';
+  $('upload-success').style.display = 'none';
+  dz.style.display = 'flex';
+  $('file-input').value = '';
   setStatus('Ready');
 }
 
-/* ─── view tabs ─── */
-function setView(v){
-  S.view=v;
-  document.querySelectorAll('.vtab').forEach((t,i)=>t.classList.toggle('active',['preview','stream','raw'][i]===v));
-  $('ph').style.display='none';
-  if(!S.html){$('ph').style.display='flex';return}
-  $('preview').style.display=v==='preview'?'block':'none';
-  $('stream-box').style.display=v==='stream'?'block':'none';
-  $('raw-view').style.display=v==='raw'?'block':'none';
+/* ══════════════════════════════════════════════
+   VIEW TABS
+══════════════════════════════════════════════ */
+function setView(v) {
+  S.view = v;
+  $$('.vtab').forEach((t, i) => t.classList.toggle('active', ['preview','stream','raw'][i] === v));
+  if (!S.html) { showPlaceholder(); return; }
+  hidePlaceholder();
+  $('preview-frame').style.display = v === 'preview' ? 'block' : 'none';
+  $('stream-box').style.display    = v === 'stream'  ? 'block' : 'none';
+  $('raw-view').style.display      = v === 'raw'     ? 'block' : 'none';
 }
 
-/* ─── status check ─── */
-async function checkStatus(){
-  try{
-    const r=await fetch('/api/status');
-    const d=await r.json();
-    if(d.ok){
-      $('dot').className='dot ok';
-      const q=d.qwen_models.slice(0,2).join(', ')||'none';
-      $('status-txt').textContent='✅ '+q;
-    }else{$('dot').className='dot err';$('status-txt').textContent='❌ Ollama offline'}
-  }catch{$('dot').className='dot err';$('status-txt').textContent='❌ Server offline'}
+function showPlaceholder() {
+  $('placeholder').style.display = 'flex';
+  $('placeholder').style.flexDirection = 'column';
+  $('preview-frame').style.display = 'none';
+  $('stream-box').style.display = 'none';
+  $('raw-view').style.display = 'none';
 }
-checkStatus();setInterval(checkStatus,30000);
+function hidePlaceholder() {
+  $('placeholder').style.display = 'none';
+}
 
-/* ─── load history ─── */
-async function loadHistory(){
-  const r=await fetch('/api/notes');
-  const d=await r.json();
-  $('hist-count').textContent=d.notes.length+' saved';
-  if(!d.notes.length){$('note-list').innerHTML='<div style="padding:6px 8px;font-size:.79rem;color:var(--muted)">No notes yet</div>';return}
-  $('note-list').innerHTML=d.notes.map(n=>`
-    <div class="note-item" onclick="loadNote('${n.name}')">
-      <span class="ni-icon">📄</span>
-      <span class="ni-name">${n.name.replace(/_\d{8}_\d{6}\.html$/,'').replace(/_/g,' ')}</span>
-      <span class="ni-ts">${n.ts}</span>
-      <a class="ni-open" href="/api/notes/${n.name}" target="_blank" onclick="event.stopPropagation()">↗</a>
-    </div>`).join('');
+/* ══════════════════════════════════════════════
+   STATUS CHECK
+══════════════════════════════════════════════ */
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    if (d.ok) {
+      $('pulse').className = 'pulse ok';
+      const q = (d.qwen_models || []).slice(0, 2).join(', ') || d.model || 'connected';
+      $('status-txt').textContent = q;
+    } else {
+      // may be HF endpoint
+      if (d.hf) {
+        $('pulse').className = 'pulse ok';
+        $('status-txt').textContent = '☁️ HF Inference';
+      } else {
+        $('pulse').className = 'pulse err';
+        $('status-txt').textContent = 'Ollama offline';
+      }
+    }
+  } catch {
+    $('pulse').className = 'pulse err';
+    $('status-txt').textContent = 'Server offline';
+  }
+}
+checkStatus();
+setInterval(checkStatus, 30000);
+
+/* ══════════════════════════════════════════════
+   HISTORY
+══════════════════════════════════════════════ */
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/notes');
+    const d = await r.json();
+    $('history-count').textContent = d.notes.length ? d.notes.length + ' saved' : '';
+    if (!d.notes.length) {
+      $('history-list').innerHTML = '<div class="no-notes">No notes yet — generate your first!</div>';
+      return;
+    }
+    $('history-list').innerHTML = d.notes.map(n => {
+      const label = n.name.replace(/_\d{8}_\d{6}\.html$/, '').replace(/_/g, ' ');
+      return `<div class="note-row" onclick="loadNote('${n.name}')">
+        <span class="nr-icon">📄</span>
+        <span class="nr-name" title="${label}">${label}</span>
+        <span class="nr-ts">${n.ts}</span>
+        <a class="nr-link" href="/api/notes/${n.name}" target="_blank" onclick="event.stopPropagation()">↗</a>
+      </div>`;
+    }).join('');
+  } catch {}
 }
 loadHistory();
 
-async function loadNote(name){
-  const r=await fetch('/api/notes/'+name);
-  S.html=await r.text();
-  showResult(name);
-  toast('📄 Loaded: '+name.replace(/_\d{8}_\d{6}\.html$/,'').replace(/_/g,' '));
+async function loadNote(name) {
+  try {
+    const r = await fetch('/api/notes/' + name);
+    S.html = await r.text();
+    S.noteFile = name;
+    showResult(name);
+    toast('📄 Loaded: ' + name.replace(/_\d{8}_\d{6}\.html$/, '').replace(/_/g, ' '));
+  } catch { toast('❌ Failed to load note'); }
 }
 
-/* ─── generate ─── */
-async function generate(){
-  if(S.generating)return;
+/* ══════════════════════════════════════════════
+   GENERATE
+══════════════════════════════════════════════ */
+async function generate() {
+  if (S.generating) return;
 
-  // determine input
-  let mode=S.mode,topic='',content='',srcName='';
-  if(mode==='topic'){
-    topic=$('topic-area').value.trim();
-    if(!topic){toast('⚠️ Please type a topic');$('topic-area').focus();return}
-  } else if(mode==='paste'){
-    content=$('content-area').value.trim().slice(0,8000);
-    if(!content){toast('⚠️ Please paste some content');$('content-area').focus();return}
-    srcName='pasted text';
-    mode='content';
+  let mode = S.mode, topic = '', content = '', srcName = '';
+
+  if (mode === 'topic') {
+    topic = $('topic-area').value.trim();
+    if (!topic) { toast('⚠️ Please enter a topic first'); $('topic-area').focus(); return; }
+  } else if (mode === 'paste') {
+    content = $('content-area').value.trim().slice(0, 8000);
+    if (!content) { toast('⚠️ Please paste some content first'); $('content-area').focus(); return; }
+    srcName = 'pasted text';
+    mode = 'content';
   } else {
-    if(!S.fileContent){toast('⚠️ Please upload a file first');return}
-    content=S.fileContent.slice(0,8000);
-    srcName=S.fileName;
-    mode='content';
+    if (!S.fileContent) { toast('⚠️ Please upload a file first'); return; }
+    content = S.fileContent.slice(0, 8000);
+    srcName = S.fileName;
+    mode = 'content';
   }
 
-  S.generating=true;
-  $('gen-btn').disabled=true;
-  $('spinner').classList.add('on');
-  $('gen-label').textContent='Generating…';
-  setProg(5);
-  $('out-actions').style.display='none';
+  S.generating = true;
+  $('gen-btn').disabled = true;
+  $('spin').classList.add('on');
+  $('gen-label').textContent = 'Generating…';
+  $('out-actions').style.display = 'none';
+  setProgress(5);
 
-  // show live stream view
-  $('ph').style.display='none';
-  $('preview').style.display='none';
-  $('raw-view').style.display='none';
-  $('stream-box').style.display='block';
-  $('stream-box').textContent='';
-  setView('stream');
+  // Show live stream
+  hidePlaceholder();
+  $('preview-frame').style.display = 'none';
+  $('raw-view').style.display = 'none';
+  $('stream-box').style.display = 'block';
+  $('stream-box').textContent = '';
+  $$('.vtab').forEach((t, i) => t.classList.toggle('active', i === 1));
+  S.view = 'stream';
 
-  const body={mode,topic,content,source_name:srcName,model:S.model,session_id:S.sessionId};
-  const label=topic||srcName||'content';
-  setStatus(`🚀 Generating notes for: ${label.slice(0,50)}…`,'#a59bff');
+  const label = (topic || srcName || 'content').slice(0, 50);
+  setStatus(`🚀 Generating: ${label}…`, 'var(--accent2)');
 
-  let chunks=[];
-  let prog=8;
-  const pt=setInterval(()=>{if(prog<88){prog+=.6;setProg(prog)}},350);
+  const body = { mode, topic, content, source_name: srcName, model: $('model-sel').value, session_id: S.sessionId };
+  let chunks = [], prog = 8;
+  const progTimer = setInterval(() => { if (prog < 88) { prog += .5; setProgress(prog); } }, 400);
 
-  try{
-    const resp=await fetch('/api/generate',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const reader=resp.body.getReader();
-    const dec=new TextDecoder();
-    let buf='';
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
 
-    while(true){
-      const{done,value}=await reader.read();
-      if(done)break;
-      buf+=dec.decode(value,{stream:true});
-      const lines=buf.split('\n');buf=lines.pop();
-      for(const line of lines){
-        if(!line.startsWith('data: '))continue;
-        try{
-          const ev=JSON.parse(line.slice(6));
-          if(ev.type==='meta'){S.sessionId=ev.session_id;setStatus(`⚡ ${ev.model} · ${ev.mode} mode`)}
-          else if(ev.type==='chunk'){
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === 'meta') {
+            S.sessionId = ev.session_id;
+            setStatus(`⚡ ${ev.model} · ${ev.mode} mode`, 'var(--accent3)');
+          } else if (ev.type === 'chunk') {
             chunks.push(ev.text);
-            $('stream-box').textContent=chunks.join('');
-            $('stream-box').scrollTop=$('stream-box').scrollHeight;
-          }
-          else if(ev.type==='done'){
-            clearInterval(pt);setProg(100);
-            const html=chunks.join('').trim()
-              .replace(/^```html\n?/,'').replace(/^```\n?/,'').replace(/\n?```$/,'').trim();
-            S.html=html;S.noteFile=ev.note_file;
+            $('stream-box').textContent = chunks.join('');
+            $('stream-box').scrollTop = $('stream-box').scrollHeight;
+          } else if (ev.type === 'done') {
+            clearInterval(progTimer); setProgress(100);
+            const raw = chunks.join('').trim()
+              .replace(/^```html\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim();
+            S.html = raw; S.noteFile = ev.note_file;
             showResult(ev.note_file);
-            setStatus(`✅ Done in ${ev.elapsed}s · saved: ${ev.note_file}`);
-            toast(`✅ Notes ready (${ev.elapsed}s)`);
+            setStatus(`✅ Done in ${ev.elapsed}s · ${ev.note_file}`, 'var(--green)');
+            toast(`✅ Notes ready in ${ev.elapsed}s`);
             loadHistory();
           }
-        }catch{}
+        } catch {}
       }
     }
-  }catch(e){
-    clearInterval(pt);setProg(0);
-    setStatus('❌ Error: '+e.message,'#ef4444');
-    toast('❌ Failed: '+e.message);
-    $('ph').style.display='flex';
-    $('stream-box').style.display='none';
-  }finally{
-    S.generating=false;
-    $('gen-btn').disabled=false;
-    $('spinner').classList.remove('on');
-    $('gen-label').textContent='✨ Generate Notes';
+  } catch (e) {
+    clearInterval(progTimer); setProgress(0);
+    setStatus('❌ ' + e.message, 'var(--red)');
+    toast('❌ Failed: ' + e.message);
+    showPlaceholder();
+  } finally {
+    S.generating = false;
+    $('gen-btn').disabled = false;
+    $('spin').classList.remove('on');
+    $('gen-label').textContent = '✨ Generate Notes';
   }
 }
 
-function showResult(fname){
-  // render iframe
-  const blob=new Blob([S.html],{type:'text/html'});
-  $('preview').src=URL.createObjectURL(blob);
-  // raw code
-  $('raw-code').textContent=S.html;
-  // set download
-  $('dl-btn').href='/api/notes/'+fname;
-  $('dl-btn').download=fname;
-  $('open-btn').href='/api/notes/'+fname;
-  $('out-actions').style.display='flex';
+function showResult(fname) {
+  const blob = new Blob([S.html], { type: 'text/html' });
+  $('preview-frame').src = URL.createObjectURL(blob);
+  $('raw-code').textContent = S.html;
+  $('dl-btn').href = '/api/notes/' + fname;
+  $('dl-btn').download = fname;
+  $('open-btn').href = '/api/notes/' + fname;
+  $('note-badge').textContent = fname;
+  $('out-actions').style.display = 'flex';
   setView('preview');
 }
 
-/* ─── clear ─── */
-function clearAll(){
-  $('topic-area').value='';
-  $('content-area').value='';
+/* ══════════════════════════════════════════════
+   CLEAR
+══════════════════════════════════════════════ */
+function clearAll() {
+  $('topic-area').value = '';
+  $('content-area').value = '';
+  $('char-count').textContent = '0 chars';
   clearFile();
-  S.html='';S.noteFile=null;
-  $('stream-box').style.display='none';
-  $('preview').style.display='none';
-  $('raw-view').style.display='none';
-  $('out-actions').style.display='none';
-  $('ph').style.display='flex';
-  setProg(0);
-  setStatus('Ready — choose a mode and generate notes');
-  toast('Cleared');
+  S.html = ''; S.noteFile = null;
+  showPlaceholder();
+  $('out-actions').style.display = 'none';
+  setProgress(0);
+  setStatus('Ready — choose a mode and generate');
+  toast('Cleared ✓');
 }
 
-/* ─── copy HTML ─── */
-function copyHtml(){
-  navigator.clipboard.writeText(S.html).then(()=>toast('✅ HTML copied!'));
+/* ══════════════════════════════════════════════
+   COPY HTML
+══════════════════════════════════════════════ */
+function copyHtml() {
+  navigator.clipboard.writeText(S.html).then(() => toast('✅ HTML copied to clipboard!'));
 }
 
-/* ─── keyboard shortcut ─── */
-document.addEventListener('keydown',e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generate();
+/* ══════════════════════════════════════════════
+   KEYBOARD
+══════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generate();
 });
 
-/* ─── model selector ─── */
-$('model-sel').addEventListener('change',e=>S.model=e.target.value);
+/* ══════════════════════════════════════════════
+   MODEL SELECTOR
+══════════════════════════════════════════════ */
+$('model-sel').addEventListener('change', e => { S.model = e.target.value; });
+
+/* init */
+setMode('topic');
 </script>
 </body>
 </html>

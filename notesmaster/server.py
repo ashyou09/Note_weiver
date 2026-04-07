@@ -1,11 +1,15 @@
 """
 server.py — NotesMaster AI
 ---------------------------
-Two modes:
-  MODE 1 — TOPIC:   user types/speaks a topic → AI generates structured notes from scratch
+Modes:
+  MODE 1 — TOPIC:   user types a topic → AI generates structured notes from scratch
   MODE 2 — CONTENT: user pastes text OR uploads PDF/txt/md → AI makes notes FROM that content
 
-Uses claw infrastructure:
+AI Backend (auto-detected, in priority order):
+  1. Local Ollama  (OPENAI_BASE_URL defaults to http://127.0.0.1:11434/v1)
+  2. Hugging Face Inference API (HF_TOKEN env var)
+
+Claw infrastructure used:
   - QueryEnginePort   → session management + turn tracking
   - TranscriptStore   → history with auto-compaction
   - StoredSession     → JSON session persistence
@@ -20,7 +24,7 @@ from datetime import datetime
 from flask import Flask, request, Response, send_from_directory, jsonify, stream_with_context
 import requests as http
 
-# ── repo root → claw src/ ───────────────────────────────────────────────────
+# ── repo root → claw src/ ──────────────────────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -31,10 +35,14 @@ from src.history import HistoryLog
 from src.runtime import PortRuntime
 from src.system_init import build_system_init_message
 
-# ── config ──────────────────────────────────────────────────────────────────
+# ── config ─────────────────────────────────────────────────────────────────
 OLLAMA_URL    = os.environ.get("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_KEY    = os.environ.get("OPENAI_API_KEY",  "ollama")
-DEFAULT_MODEL = os.environ.get("NOTES_MODEL",     "qwen3.5:4b")
+HF_TOKEN      = os.environ.get("HF_TOKEN", "")
+HF_MODEL      = os.environ.get("HF_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:4b")
+PORT          = int(os.environ.get("PORT", 7860))
+
 SESSION_DIR   = Path(__file__).parent / ".sessions"
 NOTES_DIR     = Path(__file__).parent / "notes"
 UPLOAD_DIR    = Path(__file__).parent / "uploads"
@@ -46,13 +54,33 @@ app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32 MB max upload
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PROMPTS — two modes
+# BACKEND DETECTION
+# ═══════════════════════════════════════════════════════════════════════════
+
+def ollama_available() -> bool:
+    """Check if local Ollama is running."""
+    try:
+        r = http.get("http://localhost:11434/api/tags", timeout=2)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+def get_backend() -> str:
+    """Return 'ollama' or 'hf' depending on what's available."""
+    if ollama_available():
+        return "ollama"
+    if HF_TOKEN:
+        return "hf"
+    return "none"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SYSTEM PROMPT
 # ═══════════════════════════════════════════════════════════════════════════
 
 SYSTEM_BASE = """\
 I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
 Length rule (most important):
-you should check first if that language is other than english convert in english then do other things with removing anything form input data.
 
 Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
 Every formula gets a plain-language explanation of what each term means
@@ -116,18 +144,17 @@ def build_topic_prompt(topic: str) -> str:
     return (
         f"Create complete, professional study notes for this topic:\n\n"
         f"TOPIC: {topic}\n\n"
-        f"Follow the 13-step teaching flow strictly. Generate a FULL HTML document."
+        f"Follow the structured teaching flow strictly. Generate a FULL HTML document."
     )
 
 def build_content_prompt(content: str, source_name: str) -> str:
-    preview = content[:200].replace('\n', ' ')
     return (
         f"The user has provided content from '{source_name}'. "
         f"Study this content carefully and create COMPLETE, STRUCTURED notes from it.\n\n"
         f"SOURCE: {source_name}\n"
         f"CONTENT ({len(content)} characters):\n"
         f"---\n{content}\n---\n\n"
-        f"Extract ALL key concepts, organize them using the 13-step teaching flow for each major concept, "
+        f"Extract ALL key concepts, organize them using the structured teaching flow, "
         f"and generate a FULL HTML study guide document from this material."
     )
 
@@ -148,13 +175,13 @@ def extract_pdf_text(file_bytes: bytes) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# OLLAMA — OpenAI-compat streaming (mirrors claw's openai_compat.rs)
+# STREAMING — Ollama (OpenAI-compat)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def ollama_stream(messages: list[dict], model: str):
     url = f"{OLLAMA_URL}/chat/completions"
     payload = {"model": model, "messages": messages, "stream": True,
-                "max_tokens": 8192, "temperature": 0.7, "top_p": 0.9}
+               "max_tokens": 8192, "temperature": 0.7, "top_p": 0.9}
     headers = {"Authorization": f"Bearer {OLLAMA_KEY}", "Content-Type": "application/json"}
     with http.post(url, json=payload, headers=headers, stream=True, timeout=360) as resp:
         if resp.status_code != 200:
@@ -174,6 +201,53 @@ def ollama_stream(messages: list[dict], model: str):
                     yield delta
             except Exception:
                 continue
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STREAMING — Hugging Face Inference API (OpenAI-compat)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def hf_stream(messages: list[dict], model: str):
+    """Stream from HF Inference API using OpenAI-compat endpoint."""
+    hf_model = model if "/" in model else HF_MODEL
+    url = f"https://api-inference.huggingface.co/v1/chat/completions"
+    payload = {
+        "model": hf_model,
+        "messages": messages,
+        "stream": True,
+        "max_tokens": 8192,
+        "temperature": 0.7,
+    }
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    with http.post(url, json=payload, headers=headers, stream=True, timeout=360) as resp:
+        if resp.status_code != 200:
+            yield f"[HF ERROR {resp.status_code}]: {resp.text[:300]}"
+            return
+        for raw in resp.iter_lines():
+            if not raw:
+                continue
+            line = raw.decode() if isinstance(raw, bytes) else raw
+            if line.startswith("data: "):
+                line = line[6:]
+            if line.strip() == "[DONE]":
+                break
+            try:
+                delta = json.loads(line)["choices"][0]["delta"].get("content", "")
+                if delta:
+                    yield delta
+            except Exception:
+                continue
+
+
+def auto_stream(messages: list[dict], model: str, backend: str):
+    """Route to ollama or HF based on backend."""
+    if backend == "hf":
+        yield from hf_stream(messages, model)
+    else:
+        yield from ollama_stream(messages, model)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -201,17 +275,24 @@ def get_engine(session_id: str | None) -> QueryEnginePort:
 def index():
     return send_from_directory("static", "index.html")
 
+
 @app.route("/api/status")
 def status():
-    try:
-        r = http.get("http://localhost:11434/api/tags", timeout=3)
-        if r.status_code == 200:
+    backend = get_backend()
+    if backend == "ollama":
+        try:
+            r = http.get("http://localhost:11434/api/tags", timeout=3)
             models = [m["name"] for m in r.json().get("models", [])]
             qwen = [m for m in models if "qwen" in m.lower()]
-            return jsonify({"ok": True, "ollama": True, "models": models, "qwen_models": qwen})
-    except Exception as e:
-        return jsonify({"ok": False, "ollama": False, "error": str(e)})
-    return jsonify({"ok": False, "ollama": False})
+            return jsonify({"ok": True, "ollama": True, "hf": False,
+                            "models": models, "qwen_models": qwen})
+        except Exception as e:
+            return jsonify({"ok": False, "ollama": False, "hf": False, "error": str(e)})
+    elif backend == "hf":
+        return jsonify({"ok": True, "ollama": False, "hf": True,
+                        "model": HF_MODEL, "qwen_models": []})
+    return jsonify({"ok": False, "ollama": False, "hf": False,
+                    "error": "No AI backend available. Set HF_TOKEN or start Ollama."})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -226,7 +307,7 @@ def upload():
     try:
         if ext == "pdf":
             text = extract_pdf_text(data)
-        else:  # txt, md, or any text
+        else:
             text = data.decode("utf-8", errors="replace")
         text = text.strip()
         if not text:
@@ -256,13 +337,17 @@ def generate():
     if mode == "content" and not content:
         return jsonify({"error": "No content provided"}), 400
 
+    backend = get_backend()
+    if backend == "none":
+        return jsonify({"error": "No AI backend available. Start Ollama or set HF_TOKEN."}), 503
+
     def stream():
-        # ── claw infrastructure ─────────────────────────────────────────
+        # ── claw infrastructure ──────────────────────────────────────────
         history = HistoryLog()
         runtime = PortRuntime()
         query   = topic if mode == "topic" else src_name
         matches = runtime.route_prompt(query, limit=5)
-        history.add("routing", f"mode={mode} matches={len(matches)}")
+        history.add("routing", f"mode={mode} matches={len(matches)} backend={backend}")
 
         engine = get_engine(session_id)
         history.add("session", f"id={engine.session_id} turns={len(engine.mutable_messages)}")
@@ -270,9 +355,8 @@ def generate():
         workspace_ctx = build_system_init_message(trusted=True)
         full_system = SYSTEM_BASE + f"\n\n<!-- Workspace: {workspace_ctx} -->"
 
-        # build messages with transcript history
         messages = [{"role": "system", "content": full_system}]
-        for m in engine.transcript_store.replay()[-6:]:  # last 3 exchanges
+        for m in engine.transcript_store.replay()[-6:]:
             if m.startswith("U:"):
                 messages.append({"role": "user", "content": m[2:].strip()})
             elif m.startswith("A:"):
@@ -280,22 +364,22 @@ def generate():
 
         user_msg = build_topic_prompt(topic) if mode == "topic" else build_content_prompt(content, src_name)
         messages.append({"role": "user", "content": user_msg})
-        history.add("messages", f"len={len(messages)} mode={mode}")
+        history.add("messages", f"len={len(messages)} mode={mode} backend={backend}")
 
-        # ── metadata event ──────────────────────────────────────────────
-        yield f"data: {json.dumps({'type':'meta','session_id':engine.session_id,'model':model,'mode':mode,'routes':[{'kind':m.kind,'name':m.name,'score':m.score} for m in matches[:4]]})}\n\n"
+        # ── metadata event ───────────────────────────────────────────────
+        yield f"data: {json.dumps({'type':'meta','session_id':engine.session_id,'model':model,'mode':mode,'backend':backend,'routes':[{'kind':m.kind,'name':m.name,'score':m.score} for m in matches[:4]]})}\\n\\n"
 
-        # ── stream from Ollama ──────────────────────────────────────────
-        start = time.time()
+        # ── stream tokens ────────────────────────────────────────────────
+        start  = time.time()
         chunks = []
-        for chunk in ollama_stream(messages, model):
+        for chunk in auto_stream(messages, model, backend):
             chunks.append(chunk)
-            yield f"data: {json.dumps({'type':'chunk','text':chunk})}\n\n"
+            yield f"data: {json.dumps({'type':'chunk','text':chunk})}\\n\\n"
 
-        elapsed = round(time.time() - start, 1)
+        elapsed  = round(time.time() - start, 1)
         raw_html = "".join(chunks).strip()
 
-        # strip markdown fences if model added them
+        # strip markdown fences if model wrapped output
         if raw_html.startswith("```html"):
             raw_html = raw_html[7:]
         if raw_html.startswith("```"):
@@ -304,7 +388,7 @@ def generate():
             raw_html = raw_html[:-3]
         raw_html = raw_html.strip()
 
-        # ── claw session update ─────────────────────────────────────────
+        # ── claw session update ──────────────────────────────────────────
         engine.submit_message(
             f"Notes: {topic or src_name}",
             matched_commands=tuple(m.name for m in matches if m.kind == "command"),
@@ -316,28 +400,36 @@ def generate():
         session_path = engine.persist_session()
         history.add("done", f"elapsed={elapsed}s session={session_path}")
 
-        # ── save HTML ───────────────────────────────────────────────────
+        # ── save HTML ────────────────────────────────────────────────────
         safe = "".join(c for c in (topic or src_name)[:40] if c.isalnum() or c in " -_").strip().replace(" ", "_")
         fname = f"{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         (NOTES_DIR / fname).write_text(raw_html, encoding="utf-8")
 
-        yield f"data: {json.dumps({'type':'done','elapsed':elapsed,'note_file':fname,'session_id':engine.session_id})}\n\n"
+        yield f"data: {json.dumps({'type':'done','elapsed':elapsed,'note_file':fname,'session_id':engine.session_id})}\\n\\n"
 
-    return Response(stream_with_context(stream()), mimetype="text/event-stream",
-                    headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+    return Response(
+        stream_with_context(stream()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.route("/api/notes")
 def list_notes():
     notes = []
     for f in sorted(NOTES_DIR.glob("*.html"), reverse=True)[:30]:
-        notes.append({"name": f.name, "size": f.stat().st_size,
-                       "ts": datetime.fromtimestamp(f.stat().st_mtime).strftime("%d %b %H:%M")})
+        notes.append({
+            "name": f.name,
+            "size": f.stat().st_size,
+            "ts": datetime.fromtimestamp(f.stat().st_mtime).strftime("%d %b %H:%M"),
+        })
     return jsonify({"notes": notes})
+
 
 @app.route("/api/notes/<filename>")
 def get_note(filename):
     return send_from_directory(str(NOTES_DIR), filename)
+
 
 @app.route("/api/sessions")
 def list_sessions():
@@ -345,19 +437,27 @@ def list_sessions():
     for f in sorted(SESSION_DIR.glob("*.json"), reverse=True)[:15]:
         try:
             d = json.loads(f.read_text())
-            sessions.append({"id": d.get("session_id", f.stem),
-                              "messages": len(d.get("messages", [])),
-                              "tokens_in": d.get("input_tokens", 0),
-                              "tokens_out": d.get("output_tokens", 0)})
+            sessions.append({
+                "id": d.get("session_id", f.stem),
+                "messages": len(d.get("messages", [])),
+                "tokens_in": d.get("input_tokens", 0),
+                "tokens_out": d.get("output_tokens", 0),
+            })
         except Exception:
             pass
     return jsonify({"sessions": sessions})
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ENTRY POINT
+# ═══════════════════════════════════════════════════════════════════════════
+
 if __name__ == "__main__":
-    print(f"\n{'═'*52}")
+    backend = get_backend()
+    print(f"\n{'═'*54}")
     print(f"  🎓  NotesMaster AI")
-    print(f"  🤖  Model: {DEFAULT_MODEL}")
-    print(f"  🌐  http://localhost:8080")
-    print(f"{'═'*52}\n")
-    app.run(host="0.0.0.0", port=8080, debug=False, threaded=True)
+    print(f"  🤖  Model : {DEFAULT_MODEL}")
+    print(f"  🔌  Backend: {backend.upper()} {'('+HF_MODEL+')' if backend=='hf' else ''}")
+    print(f"  🌐  http://localhost:{PORT}")
+    print(f"{'═'*54}\n")
+    app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
