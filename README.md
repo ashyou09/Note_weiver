@@ -1,11 +1,3 @@
----
-title: NotesMaster AI
-emoji: 🎓
-colorFrom: indigo
-colorTo: purple
-sdk: docker
-pinned: false
----
 
 # 🎓 NotesMaster AI
 
