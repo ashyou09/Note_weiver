@@ -7,7 +7,7 @@ Modes:
 
 AI Backend (auto-detected, in priority order):
   1. Local Ollama  (OPENAI_BASE_URL defaults to http://127.0.0.1:11434/v1)
-  2. Hugging Face Inference API (HF_TOKEN env var)
+  2. OpenRouter API (OPENROUTER_API_KEY env var)
 
 Claw infrastructure used:
   - QueryEnginePort   → session management + turn tracking
@@ -30,6 +30,12 @@ try:
 except ImportError:
     HAS_OPENAI = False
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
+
 # ── repo root → claw src/ ──────────────────────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -44,10 +50,10 @@ from src.system_init import build_system_init_message
 # ── config ─────────────────────────────────────────────────────────────────
 OLLAMA_URL    = os.environ.get("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_KEY    = os.environ.get("OPENAI_API_KEY",  "ollama")
-HF_TOKEN      = os.environ.get("HF_TOKEN", "")
-HF_MODEL      = os.environ.get("HF_MODEL", "Qwen/Qwen3-8B")
-DASHSCOPE_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:4b")
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_QWEN_KEY = os.environ.get("OPENROUTER_QWEN_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen-plus")
+DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:2b")
 PORT          = int(os.environ.get("PORT", 7860))
 
 SESSION_DIR   = Path(__file__).parent / ".sessions"
@@ -74,11 +80,9 @@ def ollama_available() -> bool:
 
 def get_backend() -> str:
     """Return primary backend depending on what's available."""
-    if DASHSCOPE_KEY and HAS_OPENAI:
-        return "dashscope"
     if ollama_available():
         return "ollama"
-    return "hf" # Always fallback to Public HF Inference API
+    return "openrouter" # Always fallback to Public OpenRouter Inference
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -145,6 +149,207 @@ Second-to-last section — Code Implementation (if code is present)
 Last section — Key Takeaways (8–12 points, 2 sentences each)
 
 The final notes should feel like they were written by a student who understood everything deeply and wants someone else to be able to learn the full topic just from these notes — without needing to watch the video or read the original.
+
+
+What changed from the old prompt and why:
+The old prompt was short so the AI treated it as a "make a summary" task. This one sets explicit length rules — every concept gets proper explanation, every example gets worked out fully, and there's a clear target that the notes should be able to replace the source content. The "what to avoid" section stops the AI from collapsing complex ideas into single bullet points, which was the main reason notes came out too short.
+One more tip — if notes still feel too short on a specific section, just reply:
+
+"Section [X] is too short — expand it with more explanation and work out all the examples fully"
+
+That's faster than regenerating everything.I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
+Length rule (most important):
+
+Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
+Every formula gets a plain-language explanation of what each term means
+Every example from the content must be fully worked out with numbers, not just mentioned
+Every function/algorithm gets explained in terms of what goes in, what happens inside, and what comes out
+Do NOT summarize or compress — if the content spent time on something, your notes should too
+Do NOT pad or repeat — say each thing once, say it well
+A good target: if the content is a 30-minute video, notes should be long enough to replace watching it
+
+Content requirements:
+
+Start each section by answering "what is this and why does it matter" before going into details
+Cover every concept, definition, formula, comparison, worked example, and code snippet
+For comparisons (like A vs B): always explain both sides fully with a table or two-column card
+For formulas: write the formula, then explain each variable, then show a worked numerical example
+For code: explain what the function does in plain words first, then show the code block, then explain the output line by line
+For pros/cons or advantages/disadvantages: give at least 2–3 sentences per point, not just a label
+Add hinglish naturally where it helps understanding (not forced — only when it makes something click)
+End with a Key Takeaways section — 8 to 12 numbered points, each 2 sentences minimum
+
+What to avoid:
+
+Do NOT write one-line bullet points for complex ideas
+Do NOT skip examples that appear in the source content
+Do NOT merge two different concepts into one vague paragraph
+Do NOT add fluff, filler phrases, or repeat the same point twice
+Do NOT make sections that are just a heading with 3 short bullets under it
+
+Design requirements:
+
+White background everywhere — no dark backgrounds, including code blocks
+Deep navy/dark blue for h1 and h2 headings, dark slate for h3
+Blue left-border (4px solid) for all h2 section headings
+Body text in deep navy (#1a1a2e), not plain black
+Light blue tinted background (#f4f7fe) for formula boxes, code blocks, and info cards
+Code syntax colors: keywords = dark blue bold, function names = dark purple, strings = dark red-brown, comments = dark green italic, numbers = dark teal
+Orange left-border highlight boxes for key insights and important notes
+Green left-border boxes for good results, advantages, key takeaways
+Red left-border boxes for warnings, disadvantages, common mistakes
+Two-column grid cards for comparisons and side-by-side content
+Step flow layout (dot + line + card) for algorithms and processes
+Advantages vs disadvantages in colored cards — green card and red card side by side
+Results/output in light green box with dark green monospace text
+Tables: dark navy header, alternating light blue rows
+Hinglish tags: warm cream background, amber border, dark brown italic text
+Google Fonts: Crimson Pro (headings), Source Sans 3 (body), JetBrains Mono (code/formulas)
+Section numbers (01, 02...) in small grey monospace above each h2
+
+Structure to follow:
+
+Header — topic name (large serif), subtitle, label showing subject/series
+Section 01 — Prerequisites or Context (if any)
+Sections 02 onwards — one section per major concept or topic from the content, in the same order as the source
+Second-to-last section — Code Implementation (if code is present)
+Last section — Key Takeaways (8–12 points, 2 sentences each)
+
+The final notes should feel like they were written by a student who understood everything deeply and wants someone else to be able to learn the full topic just from these notes — without needing to watch the video or read the original.
+
+in this not mentioned that all formula and code should be in code formate color of text's what like other things proper make sure ai not get mistakeShow more12:23 AMHere's the corrected and complete prompt with all text color and formatting rules explicitly stated so the AI never guesses:
+
+THE PROMPT:
+
+I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
+
+LENGTH RULE (most important):
+
+Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
+Every formula gets a plain-language explanation of what each term means
+Every example from the content must be fully worked out with numbers, not just mentioned
+Every function/algorithm gets explained in terms of what goes in, what happens inside, and what comes out
+Do NOT summarize or compress — if the content spent time on something, your notes should too
+Do NOT pad or repeat — say each thing once, say it well
+Target: notes should be detailed enough that someone can learn the full topic without needing the original source
+
+
+CONTENT REQUIREMENTS:
+
+Start each section by answering "what is this and why does it matter" before going into details
+Cover every concept, definition, formula, comparison, worked example, and code snippet from the source
+For comparisons (A vs B): explain both sides fully — use a table or two-column card
+For formulas: write the formula → explain each variable in plain language → show a fully worked numerical example
+For code: explain what the function does in plain words first → show the full code block → explain the output
+For pros/cons: write 2–3 sentences per point, not just a label word
+Add hinglish naturally where it helps something click (not forced)
+End with Key Takeaways — 8 to 12 numbered points, each at least 2 sentences
+
+WHAT TO AVOID:
+
+Do NOT write one-line bullet points for complex ideas
+Do NOT skip any example that appears in the source
+Do NOT merge two different concepts into one paragraph
+Do NOT add filler phrases or repeat the same point twice
+Do NOT make a section that is just a heading with 3 short bullets under it
+
+
+TEXT COLORS (apply these exactly — this is critical):
+General text:
+
+Body text (p, li): #1a1a2e (deep navy — not plain black)
+H1 and H2 headings: #0d1b4b (very dark navy)
+H3 subheadings: #1e3a5f (dark slate blue)
+Section number labels: #9aa5b4 (muted grey)
+Small labels / uppercase tags: #3d5c99 (medium blue)
+Italic notes / footnotes: #3d5c99
+<strong> tags inside paragraphs: #0d1b4b
+
+Formula box text:
+
+Formula box background: #f4f7fe — border: #b8ccf0
+Formula text (the actual math): #0d1b4b (dark navy)
+Formula title label: #3d5c99
+Comments inside formula box (explanation lines starting with //): #5c7ab0
+
+Code block text (light background — NOT dark):
+
+Code block background: #f4f7fe — border: #b8ccf0
+Default code text: #0d1b4b
+Keywords (def, for, if, import, return, class): #0d3d8c bold
+Function names: #7a1fa2 (dark purple) bold
+Strings (anything in quotes): #8b2500 (dark red-brown)
+Comments (# lines): #1a5c2a (dark green) italic
+Numbers and numeric values: #0d5c3a (dark teal) bold
+Variable names: #0055aa (dark blue)
+Imported class names / sklearn classes: #7a1fa2 (dark purple) bold
+Code block title label: #3d5c99, border-bottom #c8d8f5
+
+Inline code (backtick style):
+
+Background: #e8eef8 — text: #0d3d8c
+
+Box colors:
+
+Highlight / insight box: background #fffbf0, left-border #c87d00, text #1a1a2e, strong text #7a4400
+Green / good box: background #f0faf4, left-border #1a7a44, text #1a1a2e, strong text #0d4a27
+Red / warning box: background #fff5f5, left-border #b91c1c, text #1a1a2e, strong text #7f1d1d
+Definition box: background #eef4ff, border #93b8ef, label color #0d3d8c
+Output / result box: background #f0faf4, border #7abf96, text #0d3d1e, label #0d5c2a
+
+Table colors:
+
+Header row: background #0d3d8c, text #ffffff
+Even rows: background #f4f7fe
+Cell text: #1a1a2e
+Cell border: #d0daea
+
+Card colors:
+
+Regular info card: background #f9fbff, border #b8ccf0
+Card heading (h4): #0d3d8c, border-bottom #c8d8f5
+Advantage card: background #f0faf4, border #1a7a44, heading #0d4a27
+Disadvantage card: background #fff5f5, border #b91c1c, heading #7f1d1d
+Gradient/formula card title: #0d3d8c
+
+Hinglish tag:
+
+Background #fff5e6, border #e8a838, text #7a3800 italic
+
+Step flow (algorithm steps):
+
+Dot: #1a6ef5
+Line: #c8d8f5
+Card background: #f4f7fe, border #c8d8f5
+Card strong text: #0d3d8c
+
+HR divider: #c8d8f5
+
+DESIGN & LAYOUT REQUIREMENTS:
+
+White background (#ffffff) everywhere — absolutely no dark backgrounds on any element
+Google Fonts: Crimson Pro (h1, h2 headings), Source Sans 3 (all body text), JetBrains Mono (all code, formulas, labels)
+H2 headings: blue left-border 4px solid #1a6ef5, padding-left 12px
+Section numbers: small JetBrains Mono text in #9aa5b4 above each h2
+Comparison content: always use two-column CSS grid cards
+Algorithms and processes: use step flow layout (dot → line → card, repeating)
+Advantages vs disadvantages: side-by-side colored cards (green left, red right)
+All formulas: inside a formula box with light blue background — use JetBrains Mono font, #0d1b4b text
+All code: inside a code block with light blue background — syntax highlighted using the exact colors above
+HR between every major section
+Print-friendly: @media print { body { padding: 20px; } }
+
+
+STRUCTURE:
+
+Header — large serif topic name (#0d1b4b), subtitle in #2d3a5c, label in small caps grey monospace
+Section 01 — Prerequisites or Background context
+Sections 02 onwards — one section per major concept, in the same order as the source material
+Second-to-last section — Code Implementation (if code is in the source)
+Last section — Key Takeaways (8–12 numbered points, 2 sentences each minimum)
+
+
+The final output should be a single complete HTML file. The notes should feel like they were written by a student who fully understood the content and wants someone else to learn the entire topic from just these notes — without needing to refer back to the original source at all.
 """
 
 def build_topic_prompt(topic: str) -> str:
@@ -188,122 +393,96 @@ def extract_pdf_text(file_bytes: bytes) -> str:
 def ollama_stream(messages: list[dict], model: str):
     url = f"{OLLAMA_URL}/chat/completions"
     payload = {"model": model, "messages": messages, "stream": True,
-               "max_tokens": 8192, "temperature": 0.7, "top_p": 0.9}
+               "max_tokens": 8192, "temperature": 0.7, "top_p": 0.9,
+               "frequency_penalty": 0.5, "presence_penalty": 0.3}
     headers = {"Authorization": f"Bearer {OLLAMA_KEY}", "Content-Type": "application/json"}
-    with http.post(url, json=payload, headers=headers, stream=True, timeout=360) as resp:
-        if resp.status_code != 200:
-            yield f"[ERROR {resp.status_code}]: {resp.text[:300]}"
-            return
-        for raw in resp.iter_lines():
-            if not raw:
-                continue
-            line = raw.decode() if isinstance(raw, bytes) else raw
-            if line.startswith("data: "):
-                line = line[6:]
-            if line.strip() == "[DONE]":
-                break
-            try:
-                delta = json.loads(line)["choices"][0]["delta"].get("content", "")
-                if delta:
-                    yield delta
-            except Exception:
-                continue
+    try:
+        with http.post(url, json=payload, headers=headers, stream=True, timeout=(10, 600)) as resp:
+            if resp.status_code != 200:
+                yield f"[ERROR {resp.status_code}]: {resp.text[:300]}"
+                return
+            for raw in resp.iter_lines():
+                if not raw:
+                    continue
+                line = raw.decode() if isinstance(raw, bytes) else raw
+                if line.startswith("data: "):
+                    line = line[6:]
+                if line.strip() == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(line)["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield {"type": "content", "text": delta}
+                except Exception:
+                    continue
+    except Exception as e:
+        yield {"type": "content", "text": f"\n\n[LOCAL OLLAMA ERROR]: The local AI model timed out or crashed {str(e)[:100]}\n\n"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STREAMING — Hugging Face Inference API (OpenAI-compat)
+# STREAMING — OpenRouter
 # ═══════════════════════════════════════════════════════════════════════════
 
-def hf_stream(messages: list[dict], model: str):
-    """Stream from HF Inference API using OpenAI-compat endpoint."""
-    hf_model = model if "/" in model else HF_MODEL
-    url = f"https://api-inference.huggingface.co/v1/chat/completions"
-    payload = {
-        "model": hf_model,
-        "messages": messages,
-        "stream": True,
-        "max_tokens": 8192,
-        "temperature": 0.7,
-    }
-    headers = {"Content-Type": "application/json"}
-    if HF_TOKEN:
-        headers["Authorization"] = f"Bearer {HF_TOKEN}"
-    with http.post(url, json=payload, headers=headers, stream=True, timeout=360) as resp:
-        if resp.status_code != 200:
-            yield f"[HF ERROR {resp.status_code}]: {resp.text[:300]}"
-            return
-        for raw in resp.iter_lines():
-            if not raw:
-                continue
-            line = raw.decode() if isinstance(raw, bytes) else raw
-            if line.startswith("data: "):
-                line = line[6:]
-            if line.strip() == "[DONE]":
-                break
-            try:
-                delta = json.loads(line)["choices"][0]["delta"].get("content", "")
-                if delta:
-                    yield delta
-            except Exception:
-                continue
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# STREAMING — DashScope (Alibaba)
-# ═══════════════════════════════════════════════════════════════════════════
-
-def dashscope_stream(messages: list[dict], model: str):
-    """Stream from DashScope using the OpenAI SDK."""
-    if not HAS_OPENAI or not DASHSCOPE_KEY:
-        yield f"[ERROR] Missing DashScope configuration or openai python package."
+def openrouter_stream(messages: list[dict], model: str):
+    """Stream from OpenRouter Using OpenAI client."""
+    if not HAS_OPENAI:
+        yield {"type": "content", "text": "[ERROR] The openai python package is required."}
         return
 
+    or_model = model if ("/" in model and model != "qwen-plus") else OPENROUTER_MODEL
+    
+    target_api_key = OPENROUTER_QWEN_KEY if "qwen" in or_model.lower() and OPENROUTER_QWEN_KEY else OPENROUTER_KEY
+    
     client = OpenAI(
-        api_key=DASHSCOPE_KEY,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        base_url="https://openrouter.ai/api/v1",
+        api_key=target_api_key,
+        default_headers={
+            "HTTP-Referer": "https://github.com/ashyou09/Note_weiver",
+            "X-OpenRouter-Title": "NotesMaster AI",
+        }
     )
 
     try:
         resp = client.chat.completions.create(
-            model=model,
+            model=or_model,
             messages=messages,
             stream=True,
+            stream_options={"include_usage": True},
             temperature=0.7,
-            max_tokens=6000 # Dashscope preferred limit
+            max_tokens=8192,
+            extra_body={"reasoning": {"enabled": True}}
         )
         for chunk in resp:
-            content = chunk.choices[0].delta.content
+            # Handle usage chunk (usually final)
+            if hasattr(chunk, 'usage') and chunk.usage:
+                try:
+                    # Capture reasoning tokens if present (OpenRouter extension)
+                    # It might be in extra_fields or a specific sub-object
+                    r_tokens = getattr(chunk.usage, 'reasoning_tokens', 0)
+                    if r_tokens:
+                        yield {"type": "meta", "reasoning_tokens": r_tokens}
+                except:
+                    pass
+
+            if not chunk.choices:
+                continue
+
+            delta = chunk.choices[0].delta
+            content = getattr(delta, "content", None)
+            reasoning = getattr(delta, "reasoning", None) # Some models stream reasoning here
+
             if content:
-                yield content
+                yield {"type": "content", "text": content}
+            if reasoning:
+                yield {"type": "reasoning", "text": reasoning}
     except Exception as e:
-        # Check if limit was exceeded or max tokens error
-        err_msg = str(e).lower()
-        if "limit" in err_msg or "quota" in err_msg or "max_tokens" in err_msg:
-            # Fallback to qwen-plus immediately
-            fallback_model = "qwen-plus"
-            yield f"\n\n\n[DASH_SCOPE_FALLBACK:{fallback_model}]\n\n\n"
-            
-            resp = client.chat.completions.create(
-                model=fallback_model,
-                messages=messages,
-                stream=True,
-                temperature=0.7,
-                max_tokens=6000
-            )
-            for chunk in resp:
-                content = chunk.choices[0].delta.content
-                if content:
-                    yield content
-        else:
-            yield f"[ERROR DashScope]: {err_msg}"
+        yield {"type": "content", "text": f"\n\n[OPENROUTER ERROR]: The model failed to respond {str(e)[:100]}\n\n"}
 
 
 def auto_stream(messages: list[dict], model: str, backend: str):
     """Route to correct backend logic."""
-    if model.startswith("qwen-") or "qwen3-max" in model or backend == "dashscope":
-        yield from dashscope_stream(messages, model)
-    elif backend == "hf":
-        yield from hf_stream(messages, model)
+    if "/" in model or backend == "openrouter" or "claude" in model or "nemotron" in model:
+        yield from openrouter_stream(messages, model)
     else:
         yield from ollama_stream(messages, model)
 
@@ -337,26 +516,15 @@ def index():
 @app.route("/api/status")
 def status():
     backend = get_backend()
-    if backend == "dashscope":
-        try:
-            r = http.get("http://localhost:11434/api/tags", timeout=1)
-            ollama_models = [m["name"] for m in r.json().get("models", [])]
-        except:
-            ollama_models = []
-        return jsonify({"ok": True, "dashscope": True, "ollama": bool(ollama_models), "hf": True,
-                        "model": "qwen-plus", "qwen_models": ollama_models})
-    elif backend == "ollama":
+    if backend == "ollama":
         try:
             r = http.get("http://localhost:11434/api/tags", timeout=3)
             models = [m["name"] for m in r.json().get("models", [])]
-            qwen = [m for m in models if "qwen" in m.lower()]
-            return jsonify({"ok": True, "dashscope": False, "ollama": True, "hf": True,
-                            "models": models, "qwen_models": qwen})
+            return jsonify({"ok": True, "ollama": True, "openrouter": True, "models": models})
         except Exception as e:
-            return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": True, "error": str(e)})
+            return jsonify({"ok": False, "ollama": False, "openrouter": True, "error": str(e)})
     else:
-        return jsonify({"ok": True, "dashscope": False, "ollama": False, "hf": True,
-                        "model": HF_MODEL, "qwen_models": []})
+        return jsonify({"ok": True, "ollama": False, "openrouter": True, "model": OPENROUTER_MODEL})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -403,9 +571,10 @@ def generate():
 
     backend = get_backend()
     if backend == "none":
-        return jsonify({"error": "No AI backend available. Start Ollama or set HF_TOKEN."}), 503
+        return jsonify({"error": "No AI backend available. Start Ollama or set OPENROUTER_API_KEY."}), 503
 
     def stream():
+        nonlocal model
         # ── claw infrastructure ──────────────────────────────────────────
         history = HistoryLog()
         runtime = PortRuntime()
@@ -419,10 +588,31 @@ def generate():
         workspace_ctx = build_system_init_message(trusted=True)
         full_system = SYSTEM_BASE + f"\n\n<!-- Workspace: {workspace_ctx} -->"
 
-        messages = [{"role": "system", "content": full_system}]
-        for m in engine.transcript_store.replay()[-6:]:
+        # For small local models, rigorous complex instructions cause repetition. Use simplified prompt.
+        if "2b" in model.lower() or "3b" in model.lower() or "4b" in model.lower():
+            simple_sys = (
+                "You are NotesMaster AI. You MUST generate study notes about the requested topic.\n"
+                "Constraints:\n"
+                "1. Always output ONLY valid HTML wrapped inside a single <div>.\n"
+                "2. Use <h1>, <h2>, <p>, <ul>, <li> tags strictly for structure.\n"
+                "3. Stop generating once the summary is complete. Do not repeat sections."
+            )
+            messages = [{"role": "system", "content": simple_sys}]
+        else:
+            messages = [{"role": "system", "content": full_system}]
+            
+        for m in engine.transcript_store.replay()[-10:]:
             if m.startswith("U:"):
                 messages.append({"role": "user", "content": m[2:].strip()})
+            elif m.startswith("A_JSON:"):
+                try:
+                    data = json.loads(m[7:].strip())
+                    msgs = {"role": "assistant", "content": data.get("content", "")}
+                    if data.get("reasoning_details"):
+                        msgs["reasoning_details"] = data["reasoning_details"]
+                    messages.append(msgs)
+                except:
+                    messages.append({"role": "assistant", "content": m[7:].strip()})
             elif m.startswith("A:"):
                 messages.append({"role": "assistant", "content": m[2:].strip()})
 
@@ -431,51 +621,76 @@ def generate():
         history.add("messages", f"len={len(messages)} mode={mode} backend={backend}")
 
         # ── metadata event ───────────────────────────────────────────────
-        yield f"data: {json.dumps({'type':'meta','session_id':engine.session_id,'model':model,'mode':mode,'backend':backend,'routes':[{'kind':m.kind,'name':m.name,'score':m.score} for m in matches[:4]]})}\\n\\n"
+        yield f"data: {json.dumps({'type':'meta','session_id':engine.session_id,'model':model,'mode':mode,'backend':backend,'routes':[{'kind':m.kind,'name':m.name,'score':m.score} for m in matches[:4]]})}\n\n"
 
         # ── stream tokens ────────────────────────────────────────────────
         start  = time.time()
-        chunks = []
-        for chunk in auto_stream(messages, model, backend):
-            if "[DASH_SCOPE_FALLBACK:" in chunk:
-                new_model = chunk.split("[DASH_SCOPE_FALLBACK:")[1].split("]")[0]
-                model = new_model
-                yield f"data: {json.dumps({'type':'fallback','new_model':new_model})}\\n\\n"
-                continue
-
-            chunks.append(chunk)
-            yield f"data: {json.dumps({'type':'chunk','text':chunk})}\\n\\n"
+        content_chunks = []
+        reasoning_chunks = []
+        for ev in auto_stream(messages, model, backend):
+            if isinstance(ev, str):
+                text = ev
+                content_chunks.append(text)
+                yield f"data: {json.dumps({'type':'chunk', 'text': text})}\n\n"
+            else:
+                etype = ev.get("type", "content")
+                if etype == "content":
+                    text = ev.get("text", "")
+                    content_chunks.append(text)
+                    yield f"data: {json.dumps({'type':'chunk', 'text': text})}\n\n"
+                elif etype == "reasoning":
+                    text = ev.get("text", "")
+                    reasoning_chunks.append(text)
+                    yield f"data: {json.dumps({'type':'reasoning', 'text': text})}\n\n"
+                elif etype == "meta":
+                    # Pass through metadata like reasoning_tokens
+                    yield f"data: {json.dumps(ev)}\n\n"
 
         elapsed  = round(time.time() - start, 1)
-        raw_html = "".join(chunks).strip()
+        raw_html = "".join(content_chunks).strip()
+        full_reasoning = "".join(reasoning_chunks)
 
         # strip markdown fences if model wrapped output
         if raw_html.startswith("```html"):
             raw_html = raw_html[7:]
-        if raw_html.startswith("```"):
+        elif raw_html.startswith("```"):
             raw_html = raw_html[3:]
         if raw_html.endswith("```"):
             raw_html = raw_html[:-3]
         raw_html = raw_html.strip()
 
         # ── claw session update ──────────────────────────────────────────
-        engine.submit_message(
-            f"Notes: {topic or src_name}",
-            matched_commands=tuple(m.name for m in matches if m.kind == "command"),
-            matched_tools=tuple(m.name for m in matches if m.kind == "tool"),
-        )
-        engine.transcript_store.append(f"U: {user_msg[:300]}")
-        engine.transcript_store.append(f"A: [HTML notes {len(raw_html)} chars]")
-        engine.compact_messages_if_needed()
-        session_path = engine.persist_session()
-        history.add("done", f"elapsed={elapsed}s session={session_path}")
+        try:
+            engine.submit_message(
+                f"Notes: {topic or src_name}",
+                matched_commands=tuple(m.name for m in matches if m.kind == "command"),
+                matched_tools=tuple(m.name for m in matches if m.kind == "tool"),
+            )
+            engine.transcript_store.append(f"U: {user_msg[:500]}")
+            if full_reasoning:
+                store_data = {"content": raw_html, "reasoning_details": full_reasoning}
+                engine.transcript_store.append(f"A_JSON:{json.dumps(store_data)}")
+            else:
+                engine.transcript_store.append(f"A: {raw_html}")
+            engine.compact_messages_if_needed()
+            session_path = engine.persist_session()
+            history.add("done", f"elapsed={elapsed}s session={session_path}")
+        except Exception as e:
+            print("Claw session update failed:", e)
 
         # ── save HTML ────────────────────────────────────────────────────
-        safe = "".join(c for c in (topic or src_name)[:40] if c.isalnum() or c in " -_").strip().replace(" ", "_")
-        fname = f"{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        (NOTES_DIR / fname).write_text(raw_html, encoding="utf-8")
+        try:
+            safe = "".join(c for c in (topic or src_name)[:40] if c.isalnum() or c in " -_").strip().replace(" ", "_")
+            if not safe:
+                safe = "notes"
+            fname = f"{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            (NOTES_DIR / fname).write_text(raw_html, encoding="utf-8")
+        except Exception as e:
+            fname = f"generated_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            print("Failed to save HTML tightly:", e)
+            (NOTES_DIR / fname).write_text(raw_html, encoding="utf-8")
 
-        yield f"data: {json.dumps({'type':'done','elapsed':elapsed,'note_file':fname,'session_id':engine.session_id})}\\n\\n"
+        yield f"data: {json.dumps({'type':'done','elapsed':elapsed,'note_file':fname,'session_id':engine.session_id})}\n\n"
 
     return Response(
         stream_with_context(stream()),
@@ -559,17 +774,9 @@ def start_local():
         # Check if already running first
         r = http.get("http://localhost:11434/api/tags", timeout=1)
         if r.status_code == 200:
-            return jsonify({"ok": True, "message": "Ollama is already running!"})
-    except:
-        pass
-        
-    try:
-        # Launch ollama detached
-        subprocess.Popen(["ollama", "run", model])
-        time.sleep(1) # wait briefly for server to bind
-        return jsonify({"ok": True, "message": f"Successfully launched local instance of {model}!"})
+            return jsonify({"ok": True, "message": "Ollama is ready and running!"})
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
+        return jsonify({"ok": False, "error": f"Ollama daemon does not appear to be running on port 11434. Error: {e}"})
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
@@ -580,7 +787,7 @@ if __name__ == "__main__":
     print(f"\n{'═'*54}")
     print(f"  🎓  NotesMaster AI")
     print(f"  🤖  Model : {DEFAULT_MODEL}")
-    print(f"  🔌  Backend: {backend.upper()} {'('+HF_MODEL+')' if backend=='hf' else ''}")
+    print(f"  🔌  Backend: {backend.upper()} {'('+OPENROUTER_MODEL+')' if backend=='openrouter' else ''}")
     print(f"  🌐  http://localhost:{PORT}")
     print(f"{'═'*54}\n")
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
