@@ -863,6 +863,53 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
   color: var(--muted);
   font-style: italic;
 }
+
+/* ══════════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.4);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+  z-index: 10000;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-card {
+  background: var(--bg);
+  width: 90%; max-width: 500px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transform: translateY(20px);
+  transition: transform .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay.active .modal-card { transform: translateY(0); }
+.modal-title { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.modal-body { font-size: .85rem; color: var(--text2); line-height: 1.6; margin-bottom: 20px; }
+.code-box {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .8rem;
+  color: var(--text);
+  overflow-x: auto;
+  margin: 10px 0;
+  user-select: all;
+  cursor: pointer;
+}
+.setup-btn {
+  background: var(--bg2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 6px 14px; font-size: .75rem; font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.setup-btn:hover { background: var(--bg3); }
 </style>
 </head>
 <body>
@@ -882,6 +929,7 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
       <div class="pulse" id="pulse"></div>
       <span id="status-txt">Connecting…</span>
     </div>
+    <button class="setup-btn" onclick="openModal('setupModal')">⚙️ Setup API</button>
   </div>
 </header>
 
@@ -1287,13 +1335,25 @@ async function checkStatus() {
       if (d.hf && !d.dashscope && !d.ollama) active.push('HF Inference');
       
       $('status-txt').textContent = active.length ? active.join(' + ') + ' Active' : 'Connected';
+      if ($('gen-btn').hasAttribute('disabled-by-api')) {
+          $('gen-btn').removeAttribute('disabled-by-api');
+          $('gen-btn').disabled = false;
+          $('gen-btn').style.opacity = '1';
+          $('gen-label').textContent = '✨ Generate Notes';
+      }
     } else {
       $('pulse').className = 'pulse err';
       $('status-txt').textContent = 'No APIs available';
+      $('gen-btn').disabled = true;
+      $('gen-btn').setAttribute('disabled-by-api', 'true');
+      $('gen-btn').style.opacity = '0.5';
+      $('gen-label').textContent = '⚠️ API Offline';
     }
   } catch {
     $('pulse').className = 'pulse err';
     $('status-txt').textContent = 'Server offline';
+    $('gen-btn').disabled = true;
+    $('gen-btn').style.opacity = '0.5';
   }
 }
 checkStatus();
@@ -1530,5 +1590,31 @@ function escapeHtml(unsafe) {
 /* init */
 setMode('topic');
 </script>
+
+<!-- Modals -->
+<div class="modal-overlay" id="setupModal" onclick="if(event.target===this) closeModal('setupModal')">
+  <div class="modal-card">
+    <div class="modal-title">API Authentication & Setup</div>
+    <div class="modal-body">
+      <strong>1. Use Cloud AI (DashScope / Qwen)</strong><br>
+      To unlock the Cloud models on Hugging Face, you must add your API Key in your Space Settings:<br>
+      Go to <em>Settings ➔ Variables and Secrets</em> and add a new secret called <strong>DASHSCOPE_API_KEY</strong> with your key.
+      <br><br>
+      <strong>2. Run 100% Locally (Private & Free)</strong><br>
+      To run this application locally on your own machine using Ollama offline, open your terminal and run:
+      <div class="code-box" onclick="navigator.clipboard.writeText('git clone https://github.com/ashyou09/Note_weiver.git\\ncd Note_weiver\\nollama pull qwen3.5:4b\\npip install -r notesmaster/requirements.txt\\npython notesmaster/server.py');toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
+cd Note_weiver
+ollama pull qwen3.5:4b
+pip install -r notesmaster/requirements.txt
+python notesmaster/server.py</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="closeModal('setupModal')">Got it</button>
+  </div>
+</div>
+<script>
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+</script>
+
 </body>
 </html>
