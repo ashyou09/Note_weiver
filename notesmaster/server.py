@@ -51,7 +51,6 @@ from src.system_init import build_system_init_message
 OLLAMA_URL    = os.environ.get("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_KEY    = os.environ.get("OPENAI_API_KEY",  "ollama")
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-OPENROUTER_QWEN_KEY = os.environ.get("OPENROUTER_QWEN_API_KEY", "")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen-plus")
 DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:2b")
 PORT          = int(os.environ.get("PORT", 7860))
@@ -431,11 +430,9 @@ def openrouter_stream(messages: list[dict], model: str):
 
     or_model = model if ("/" in model and model != "qwen-plus") else OPENROUTER_MODEL
     
-    target_api_key = OPENROUTER_QWEN_KEY if "qwen" in or_model.lower() and OPENROUTER_QWEN_KEY else OPENROUTER_KEY
-    
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=target_api_key,
+        api_key=OPENROUTER_KEY,
         default_headers={
             "HTTP-Referer": "https://github.com/ashyou09/Note_weiver",
             "X-OpenRouter-Title": "NotesMaster AI",
