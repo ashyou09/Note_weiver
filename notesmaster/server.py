@@ -24,6 +24,12 @@ from datetime import datetime
 from flask import Flask, request, Response, send_from_directory, jsonify, stream_with_context
 import requests as http
 
+try:
+    from openai import OpenAI
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
 # ── repo root → claw src/ ──────────────────────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -40,6 +46,7 @@ OLLAMA_URL    = os.environ.get("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_KEY    = os.environ.get("OPENAI_API_KEY",  "ollama")
 HF_TOKEN      = os.environ.get("HF_TOKEN", "")
 HF_MODEL      = os.environ.get("HF_MODEL", "Qwen/Qwen3-8B")
+DASHSCOPE_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
 DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:4b")
 PORT          = int(os.environ.get("PORT", 7860))
 
@@ -66,7 +73,9 @@ def ollama_available() -> bool:
         return False
 
 def get_backend() -> str:
-    """Return 'ollama' or 'hf' depending on what's available."""
+    """Return primary backend depending on what's available."""
+    if DASHSCOPE_KEY and HAS_OPENAI:
+        return "dashscope"
     if ollama_available():
         return "ollama"
     if HF_TOKEN:
@@ -242,9 +251,61 @@ def hf_stream(messages: list[dict], model: str):
                 continue
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# STREAMING — DashScope (Alibaba)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def dashscope_stream(messages: list[dict], model: str):
+    """Stream from DashScope using the OpenAI SDK."""
+    if not HAS_OPENAI or not DASHSCOPE_KEY:
+        yield f"[ERROR] Missing DashScope configuration or openai python package."
+        return
+
+    client = OpenAI(
+        api_key=DASHSCOPE_KEY,
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True,
+            temperature=0.7,
+            max_tokens=6000 # Dashscope preferred limit
+        )
+        for chunk in resp:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+    except Exception as e:
+        # Check if limit was exceeded or max tokens error
+        err_msg = str(e).lower()
+        if "limit" in err_msg or "quota" in err_msg or "max_tokens" in err_msg:
+            # Fallback to qwen-plus immediately
+            fallback_model = "qwen-plus"
+            yield f"\n\n\n[DASH_SCOPE_FALLBACK:{fallback_model}]\n\n\n"
+            
+            resp = client.chat.completions.create(
+                model=fallback_model,
+                messages=messages,
+                stream=True,
+                temperature=0.7,
+                max_tokens=6000
+            )
+            for chunk in resp:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
+        else:
+            yield f"[ERROR DashScope]: {err_msg}"
+
+
 def auto_stream(messages: list[dict], model: str, backend: str):
-    """Route to ollama or HF based on backend."""
-    if backend == "hf":
+    """Route to correct backend logic."""
+    if model.startswith("qwen-") or "qwen3-max" in model or backend == "dashscope":
+        yield from dashscope_stream(messages, model)
+    elif backend == "hf":
         yield from hf_stream(messages, model)
     else:
         yield from ollama_stream(messages, model)
@@ -279,20 +340,28 @@ def index():
 @app.route("/api/status")
 def status():
     backend = get_backend()
-    if backend == "ollama":
+    if backend == "dashscope":
+        try:
+            r = http.get("http://localhost:11434/api/tags", timeout=1)
+            ollama_models = [m["name"] for m in r.json().get("models", [])]
+        except:
+            ollama_models = []
+        return jsonify({"ok": True, "dashscope": True, "ollama": bool(ollama_models), "hf": bool(HF_TOKEN),
+                        "model": "qwen-plus", "qwen_models": ollama_models})
+    elif backend == "ollama":
         try:
             r = http.get("http://localhost:11434/api/tags", timeout=3)
             models = [m["name"] for m in r.json().get("models", [])]
             qwen = [m for m in models if "qwen" in m.lower()]
-            return jsonify({"ok": True, "ollama": True, "hf": False,
+            return jsonify({"ok": True, "dashscope": False, "ollama": True, "hf": bool(HF_TOKEN),
                             "models": models, "qwen_models": qwen})
         except Exception as e:
-            return jsonify({"ok": False, "ollama": False, "hf": False, "error": str(e)})
+            return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": False, "error": str(e)})
     elif backend == "hf":
-        return jsonify({"ok": True, "ollama": False, "hf": True,
+        return jsonify({"ok": True, "dashscope": False, "ollama": False, "hf": True,
                         "model": HF_MODEL, "qwen_models": []})
-    return jsonify({"ok": False, "ollama": False, "hf": False,
-                    "error": "No AI backend available. Set HF_TOKEN or start Ollama."})
+    return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": False,
+                    "error": "No AI configured. Set DASHSCOPE_API_KEY, HF_TOKEN, or start Ollama."})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -373,6 +442,12 @@ def generate():
         start  = time.time()
         chunks = []
         for chunk in auto_stream(messages, model, backend):
+            if "[DASH_SCOPE_FALLBACK:" in chunk:
+                new_model = chunk.split("[DASH_SCOPE_FALLBACK:")[1].split("]")[0]
+                model = new_model
+                yield f"data: {json.dumps({'type':'fallback','new_model':new_model})}\\n\\n"
+                continue
+
             chunks.append(chunk)
             yield f"data: {json.dumps({'type':'chunk','text':chunk})}\\n\\n"
 

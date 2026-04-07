@@ -12,39 +12,39 @@
    DESIGN TOKENS
 ══════════════════════════════════════════════ */
 :root {
-  --bg:       #060612;
-  --bg1:      #0d0d20;
-  --bg2:      #121228;
-  --bg3:      #1a1a38;
-  --bg4:      #232347;
+  --bg:       #ffffff;
+  --bg1:      #f8fafc;
+  --bg2:      #f1f5f9;
+  --bg3:      #e2e8f0;
+  --bg4:      #cbd5e1;
 
-  --accent:   #7c5cfc;
-  --accent2:  #a78bfa;
-  --accent3:  #c4b5fd;
-  --glow:     rgba(124,92,252,.28);
-  --glow2:    rgba(124,92,252,.12);
+  --accent:   #4f46e5;
+  --accent2:  #6366f1;
+  --accent3:  #818cf8;
+  --glow:     rgba(79,70,229,.15);
+  --glow2:    rgba(79,70,229,.05);
 
-  --teal:     #2dd4bf;
-  --pink:     #f472b6;
-  --amber:    #fbbf24;
-  --green:    #34d399;
-  --red:      #f87171;
+  --teal:     #0d9488;
+  --pink:     #db2777;
+  --amber:    #d97706;
+  --green:    #059669;
+  --red:      #dc2626;
 
-  --border:   rgba(124,92,252,.15);
-  --border2:  rgba(124,92,252,.3);
-  --border3:  rgba(255,255,255,.06);
+  --border:   #e2e8f0;
+  --border2:  #cbd5e1;
+  --border3:  rgba(0,0,0,.08);
 
-  --text:     #e2e0ff;
-  --text2:    #a09dc8;
-  --muted:    #6b6890;
-  --dim:      #3a3760;
+  --text:     #0f172a;
+  --text2:    #334155;
+  --muted:    #64748b;
+  --dim:      #94a3b8;
 
   --r:        16px;
   --r-sm:     10px;
   --r-xs:     6px;
 
-  --shadow:   0 8px 32px rgba(0,0,0,.45);
-  --shadow-sm:0 4px 16px rgba(0,0,0,.3);
+  --shadow:   0 10px 40px rgba(0,0,0,.08);
+  --shadow-sm:0 4px 12px rgba(0,0,0,.05);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,9 +70,9 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,92,252,.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(45,212,191,.07) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 50% 50%, rgba(124,92,252,.05) 0%, transparent 70%);
+    radial-gradient(ellipse 90% 60% at 10% 10%, rgba(99,102,241,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 80% 90%, rgba(13,148,136,.04) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(99,102,241,.03) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -96,7 +96,7 @@ body::before {
   justify-content: space-between;
   padding: 0 24px;
   border-bottom: 1px solid var(--border3);
-  background: rgba(6,6,18,.8);
+  background: rgba(255,255,255,.8);
   backdrop-filter: blur(20px);
   z-index: 100;
 }
@@ -172,7 +172,7 @@ body::before {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border3);
-  background: rgba(13,13,32,.6);
+  background: rgba(248,250,252,.5);
   backdrop-filter: blur(10px);
   overflow: hidden;
 }
@@ -731,15 +731,26 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
   position: absolute; inset: 0;
   display: none;
   overflow-y: auto;
-  padding: 24px;
+  overflow-x: hidden;
+  padding: 30px;
   background: var(--bg);
   font-family: 'JetBrains Mono', monospace;
-  font-size: .76rem;
-  color: #cdd6f4;
-  line-height: 1.8;
+  font-size: .85rem;
+  color: var(--text2);
+  line-height: 1.6;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-wrap: break-word;
 }
+#stream-box .blinking-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.2em;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
 
 /* Preview iframe */
 #preview-frame {
@@ -974,15 +985,16 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
     <div class="gen-bar">
       <div class="model-select-wrapper">
         <select id="model-sel">
+          <optgroup label="── DashScope (Alibaba) ──">
+            <option value="qwen-plus">Qwen Plus 🆕</option>
+            <option value="qwen3-max-2026-01-23">Qwen3 Max</option>
+          </optgroup>
           <optgroup label="── Local (Ollama) ──">
             <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
             <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
-            <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
-            <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
           </optgroup>
           <optgroup label="── HF Cloud ☁️ ──">
-            <option value="Qwen/Qwen3-8B">Qwen3-8B 🆕 Cloud</option>
-            <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B Cloud</option>
+            <option value="Qwen/Qwen3-8B">Qwen3-8B Cloud</option>
           </optgroup>
         </select>
       </div>
@@ -1406,8 +1418,12 @@ async function generate() {
             setStatus(`⚡ ${ev.model} · ${ev.mode} mode`, 'var(--accent3)');
           } else if (ev.type === 'chunk') {
             chunks.push(ev.text);
-            $('stream-box').textContent = chunks.join('');
-            $('stream-box').scrollTop = $('stream-box').scrollHeight;
+            $('stream-box').innerHTML = escapeHtml(chunks.join('')) + '<span class="blinking-cursor"></span>';
+            const sb = $('stream-box');
+            sb.scrollTop = sb.scrollHeight;
+          } else if (ev.type === 'fallback') {
+            toast(`⚠️ Model limit reached. Switching to ${ev.new_model}...`);
+            setStatus(`⚠️ Switching to ${ev.new_model}`, 'var(--amber)');
           } else if (ev.type === 'done') {
             clearInterval(progTimer); setProgress(100);
             const raw = chunks.join('').trim()
@@ -1480,6 +1496,16 @@ document.addEventListener('keydown', e => {
    MODEL SELECTOR
 ══════════════════════════════════════════════ */
 $('model-sel').addEventListener('change', e => { S.model = e.target.value; });
+
+/* escape html safely for live stream view */
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
 
 /* init */
 setMode('topic');
