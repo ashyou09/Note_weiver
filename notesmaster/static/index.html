@@ -1257,19 +1257,39 @@ async function checkStatus() {
   try {
     const r = await fetch('/api/status');
     const d = await r.json();
+
+    // Toggle optgroups based on what's available
+    const ogDash = document.querySelector('optgroup[label*="DashScope"]');
+    const ogOllama = document.querySelector('optgroup[label*="Local"]');
+    const ogHf = document.querySelector('optgroup[label*="HF"]');
+    
+    if (ogDash) { ogDash.style.display = d.dashscope ? '' : 'none'; ogDash.disabled = !d.dashscope; }
+    if (ogOllama) { ogOllama.style.display = d.ollama ? '' : 'none'; ogOllama.disabled = !d.ollama; }
+    if (ogHf) { ogHf.style.display = d.hf ? '' : 'none'; ogHf.disabled = !d.hf; }
+
+    // Auto-select first available option if current is hidden
+    const sel = $('model-sel');
+    if (sel.options[sel.selectedIndex].parentElement.style.display === 'none') {
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].parentElement.style.display !== 'none') {
+          sel.selectedIndex = i;
+          S.model = sel.value;
+          break;
+        }
+      }
+    }
+
     if (d.ok) {
       $('pulse').className = 'pulse ok';
-      const q = (d.qwen_models || []).slice(0, 2).join(', ') || d.model || 'connected';
-      $('status-txt').textContent = q;
+      let active = [];
+      if (d.dashscope) active.push('DashScope');
+      if (d.ollama) active.push('Ollama');
+      if (d.hf && !d.dashscope && !d.ollama) active.push('HF Inference');
+      
+      $('status-txt').textContent = active.length ? active.join(' + ') + ' Active' : 'Connected';
     } else {
-      // may be HF endpoint
-      if (d.hf) {
-        $('pulse').className = 'pulse ok';
-        $('status-txt').textContent = '☁️ HF Inference';
-      } else {
-        $('pulse').className = 'pulse err';
-        $('status-txt').textContent = 'Ollama offline';
-      }
+      $('pulse').className = 'pulse err';
+      $('status-txt').textContent = 'No APIs available';
     }
   } catch {
     $('pulse').className = 'pulse err';
