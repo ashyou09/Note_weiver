@@ -1,10 +1,6 @@
 ---
-title: NotesMaster AI
-emoji: 🎓
-colorFrom: indigo
-colorTo: gray
-sdk: docker
-pinned: false
+
+
 ---
 <p align="center">
   <img src="https://img.shields.io/badge/model-Qwen3%20%7C%20Qwen3.5-blueviolet?style=for-the-badge" alt="Model" />
