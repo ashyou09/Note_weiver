@@ -12,3 +12,13 @@ notesmaster/.sessions/
 .port_sessions/
 *.pyc
 .DS_Store
+.env
+.env.*
+! .env.example
+test_gemini.py
+*.tmp
+/brain/
+/knowledge/
+/walkthrough.md
+/implementation_plan.md
+/task.md
