@@ -1601,19 +1601,48 @@ setMode('topic');
       Go to <em>Settings ➔ Variables and Secrets</em> and add a new secret called <strong>DASHSCOPE_API_KEY</strong> with your key.
       <br><br>
       <strong>2. Run 100% Locally (Private & Free)</strong><br>
-      To run this application locally on your own machine using Ollama offline, open your terminal and run:
-      <div class="code-box" onclick="navigator.clipboard.writeText('git clone https://github.com/ashyou09/Note_weiver.git\\ncd Note_weiver\\nollama pull qwen3.5:4b\\npip install -r notesmaster/requirements.txt\\npython notesmaster/server.py');toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
+      To run this application locally on your own machine using Ollama offline:
+      <div id="local-action-area" style="margin-top: 10px;">
+        <button class="btn btn-primary" style="width:100%; background:var(--accent); color:#fff; padding:10px; border-radius:6px; border:none; cursor:pointer;" onclick="startLocal()">⚡ Launch Ollama Locally ⚡</button>
+      </div>
+      <div id="local-instructions" style="display:none; margin-top: 10px;">
+        <div style="color:var(--red); font-size:0.8rem; margin-bottom:5px;">Ollama is not installed. Please open your terminal and run:</div>
+        <div class="code-box" onclick="navigator.clipboard.writeText('git clone https://github.com/ashyou09/Note_weiver.git\\ncd Note_weiver\\nollama pull qwen3.5:4b\\npip install -r notesmaster/requirements.txt\\npython notesmaster/server.py');toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
 cd Note_weiver
 ollama pull qwen3.5:4b
 pip install -r notesmaster/requirements.txt
 python notesmaster/server.py</div>
+      </div>
     </div>
-    <button class="btn btn-primary" style="width:100%" onclick="closeModal('setupModal')">Got it</button>
+    <button class="setup-btn" style="width:100%; padding:10px;" onclick="closeModal('setupModal')">Close</button>
   </div>
 </div>
 <script>
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function startLocal() {
+  toast("Summoning local AI model...");
+  try {
+    const r = await fetch('/api/start-local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: "qwen3.5:4b" })
+    });
+    const d = await r.json();
+    if (d.ok) {
+        toast("✅ " + d.message);
+        checkStatus();
+        closeModal('setupModal');
+    } else {
+        document.getElementById('local-action-area').style.display = 'none';
+        document.getElementById('local-instructions').style.display = 'block';
+        toast("⚠️ " + d.error);
+    }
+  } catch (e) {
+    toast("❌ Server error starting local AI.");
+  }
+}
 </script>
 
 </body>

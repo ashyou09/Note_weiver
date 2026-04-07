@@ -18,7 +18,7 @@ Claw infrastructure used:
   - build_system_init_message() → workspace context
 """
 
-import sys, os, json, time, io
+import sys, os, json, time, io, subprocess, shutil
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, Response, send_from_directory, jsonify, stream_with_context
@@ -78,9 +78,7 @@ def get_backend() -> str:
         return "dashscope"
     if ollama_available():
         return "ollama"
-    if HF_TOKEN:
-        return "hf"
-    return "none"
+    return "hf" # Always fallback to Public HF Inference API
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -227,10 +225,9 @@ def hf_stream(messages: list[dict], model: str):
         "max_tokens": 8192,
         "temperature": 0.7,
     }
-    headers = {
-        "Authorization": f"Bearer {HF_TOKEN}",
-        "Content-Type": "application/json",
-    }
+    headers = {"Content-Type": "application/json"}
+    if HF_TOKEN:
+        headers["Authorization"] = f"Bearer {HF_TOKEN}"
     with http.post(url, json=payload, headers=headers, stream=True, timeout=360) as resp:
         if resp.status_code != 200:
             yield f"[HF ERROR {resp.status_code}]: {resp.text[:300]}"
@@ -346,22 +343,20 @@ def status():
             ollama_models = [m["name"] for m in r.json().get("models", [])]
         except:
             ollama_models = []
-        return jsonify({"ok": True, "dashscope": True, "ollama": bool(ollama_models), "hf": bool(HF_TOKEN),
+        return jsonify({"ok": True, "dashscope": True, "ollama": bool(ollama_models), "hf": True,
                         "model": "qwen-plus", "qwen_models": ollama_models})
     elif backend == "ollama":
         try:
             r = http.get("http://localhost:11434/api/tags", timeout=3)
             models = [m["name"] for m in r.json().get("models", [])]
             qwen = [m for m in models if "qwen" in m.lower()]
-            return jsonify({"ok": True, "dashscope": False, "ollama": True, "hf": bool(HF_TOKEN),
+            return jsonify({"ok": True, "dashscope": False, "ollama": True, "hf": True,
                             "models": models, "qwen_models": qwen})
         except Exception as e:
-            return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": False, "error": str(e)})
-    elif backend == "hf":
+            return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": True, "error": str(e)})
+    else:
         return jsonify({"ok": True, "dashscope": False, "ollama": False, "hf": True,
                         "model": HF_MODEL, "qwen_models": []})
-    return jsonify({"ok": False, "dashscope": False, "ollama": False, "hf": False,
-                    "error": "No AI configured. Set DASHSCOPE_API_KEY, HF_TOKEN, or start Ollama."})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -550,6 +545,31 @@ def list_sessions():
             pass
     return jsonify({"sessions": sessions})
 
+
+@app.route("/api/start-local", methods=["POST"])
+def start_local():
+    """Attempt to verify and start Ollama dynamically if requested."""
+    data = request.get_json() or {}
+    model = data.get("model", "qwen3.5:4b")
+    
+    if not shutil.which("ollama"):
+        return jsonify({"ok": False, "error": "Ollama executable not found on this system. You must download it manually."})
+    
+    try:
+        # Check if already running first
+        r = http.get("http://localhost:11434/api/tags", timeout=1)
+        if r.status_code == 200:
+            return jsonify({"ok": True, "message": "Ollama is already running!"})
+    except:
+        pass
+        
+    try:
+        # Launch ollama detached
+        subprocess.Popen(["ollama", "run", model])
+        time.sleep(1) # wait briefly for server to bind
+        return jsonify({"ok": True, "message": f"Successfully launched local instance of {model}!"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
