@@ -1606,10 +1606,10 @@ setMode('topic');
         <button class="btn btn-primary" style="width:100%; background:var(--accent); color:#fff; padding:10px; border-radius:6px; border:none; cursor:pointer;" onclick="startLocal()">⚡ Launch Ollama Locally ⚡</button>
       </div>
       <div id="local-instructions" style="display:none; margin-top: 10px;">
-        <div style="color:var(--red); font-size:0.8rem; margin-bottom:5px;">Ollama is not installed. Please open your terminal and run:</div>
-        <div class="code-box" onclick="navigator.clipboard.writeText('git clone https://github.com/ashyou09/Note_weiver.git\\ncd Note_weiver\\nollama pull qwen3.5:4b\\npip install -r notesmaster/requirements.txt\\npython notesmaster/server.py');toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
+        <div style="color:var(--red); font-size:0.8rem; margin-bottom:5px;">Ollama is not installed. Copy these commands one by one in your terminal:</div>
+        <div class="code-box" onclick="navigator.clipboard.writeText(this.innerText);toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
 cd Note_weiver
-ollama pull qwen3.5:4b
+ollama pull <span id="install-model-name">qwen3.5:4b</span>
 pip install -r notesmaster/requirements.txt
 python notesmaster/server.py</div>
       </div>
@@ -1622,17 +1622,28 @@ function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 async function startLocal() {
-  toast("Summoning local AI model...");
+  // Try to use the currently selected Ollama model if possible
+  const sel = document.getElementById('model-sel');
+  const selectedOpt = sel.options[sel.selectedIndex];
+  let targetModel = "qwen3.5:4b"; // default
+  
+  if (selectedOpt && selectedOpt.parentElement.label.includes('Ollama')) {
+    targetModel = sel.value;
+  }
+  
+  document.getElementById("install-model-name").textContent = targetModel;
+  toast("Summoning local AI model " + targetModel + "...");
+  
   try {
     const r = await fetch('/api/start-local', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: "qwen3.5:4b" })
+        body: JSON.stringify({ model: targetModel })
     });
     const d = await r.json();
     if (d.ok) {
         toast("✅ " + d.message);
-        checkStatus();
+        setTimeout(checkStatus, 3000); // Give it a sec to bind
         closeModal('setupModal');
     } else {
         document.getElementById('local-action-area').style.display = 'none';
