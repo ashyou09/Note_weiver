@@ -1606,12 +1606,8 @@ setMode('topic');
         <button class="btn btn-primary" style="width:100%; background:var(--accent); color:#fff; padding:10px; border-radius:6px; border:none; cursor:pointer;" onclick="startLocal()">⚡ Launch Ollama Locally ⚡</button>
       </div>
       <div id="local-instructions" style="display:none; margin-top: 10px;">
-        <div style="color:var(--red); font-size:0.8rem; margin-bottom:5px;">Ollama is not installed. Copy these commands one by one in your terminal:</div>
-        <div class="code-box" onclick="navigator.clipboard.writeText(this.innerText);toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git
-cd Note_weiver
-ollama pull <span id="install-model-name">qwen3.5:4b</span>
-pip install -r notesmaster/requirements.txt
-python notesmaster/server.py</div>
+        <div style="color:var(--red); font-size:0.8rem; margin-bottom:5px;">Ollama is not installed. Copy this line and paste it into your terminal:</div>
+        <div class="code-box" onclick="navigator.clipboard.writeText(this.innerText);toast('Copied to clipboard!')">git clone https://github.com/ashyou09/Note_weiver.git &amp;&amp; cd Note_weiver &amp;&amp; ollama pull <span id="install-model-name">qwen3.5:4b</span> &amp;&amp; pip install -r notesmaster/requirements.txt &amp;&amp; python notesmaster/server.py</div>
       </div>
     </div>
     <button class="setup-btn" style="width:100%; padding:10px;" onclick="closeModal('setupModal')">Close</button>
