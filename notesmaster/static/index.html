@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NotesMaster AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+<style>
+/* ── tokens ── */
+:root{
+  --bg:#0c0c18;--bg1:#111122;--bg2:#181830;--bg3:#1f1f3a;
+  --border:rgba(120,100,255,.18);--border2:rgba(120,100,255,.35);
+  --accent:#7c6fff;--accent2:#a59bff;--accent3:#c4bcff;
+  --glow:rgba(124,111,255,.2);
+  --text:#eeeeff;--muted:#8888aa;--dim:#44446a;
+  --ok:#22c55e;--err:#ef4444;--warn:#f59e0b;
+  --r:14px;--r-sm:9px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;
+          background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:10px}
+
+/* ── layout ── */
+.app{display:grid;grid-template-rows:62px 1fr;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;
+        padding:0 28px;border-bottom:1px solid var(--border);
+        background:rgba(12,12,24,.92);backdrop-filter:blur(12px);z-index:50}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+            border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.brand-name{font-size:1.05rem;font-weight:700;letter-spacing:-.02em}
+.brand-v{font-size:.7rem;color:var(--muted);margin-top:1px}
+
+.status-pill{display:flex;align-items:center;gap:7px;padding:5px 14px;
+             background:var(--bg1);border:1px solid var(--border);border-radius:20px;
+             font-size:.78rem;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:all .3s}
+.dot.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.dot.err{background:var(--err)}
+
+.body{display:grid;grid-template-columns:1fr 400px;overflow:hidden}
+
+/* ═══ LEFT — input + history ═══ */
+.left-col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+
+/* mode switcher */
+.mode-bar{display:flex;padding:14px 20px 0;gap:6px;flex-shrink:0}
+.mode-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--r-sm);
+          background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;
+          font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
+.mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;
+                 box-shadow:0 2px 12px var(--glow)}
+.mode-desc{padding:8px 20px 12px;font-size:.75rem;color:var(--muted);flex-shrink:0}
+
+/* input area */
+.input-wrap{flex:1;padding:0 20px;display:flex;flex-direction:column;gap:10px;
+            overflow:hidden;min-height:0}
+
+/* drop zone */
+#drop-zone{flex:1;border:2px dashed var(--border2);border-radius:12px;
+           display:flex;flex-direction:column;align-items:center;justify-content:center;
+           gap:8px;cursor:pointer;transition:all .2s;color:var(--muted);
+           background:var(--bg1);text-align:center;padding:24px;min-height:160px}
+#drop-zone:hover,#drop-zone.over{border-color:var(--accent);color:var(--accent3);
+                                  background:rgba(124,111,255,.05)}
+#drop-zone .dz-icon{font-size:2.2rem;opacity:.7}
+#drop-zone .dz-title{font-size:.95rem;font-weight:600;color:var(--text)}
+#drop-zone .dz-sub{font-size:.79rem}
+#drop-zone input{display:none}
+#file-badge{display:none;align-items:center;gap:8px;padding:8px 14px;
+            background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.25);
+            border-radius:var(--r-sm);font-size:.82rem;color:var(--accent3)}
+#file-badge .fb-name{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#file-badge .fb-remove{cursor:pointer;color:var(--muted);font-size:1rem;transition:color .2s}
+#file-badge .fb-remove:hover{color:var(--err)}
+
+/* big textarea */
+textarea{width:100%;background:var(--bg1);border:1px solid var(--border);
+         border-radius:12px;color:var(--text);font-family:inherit;font-size:.92rem;
+         line-height:1.65;padding:16px 18px;resize:none;
+         transition:border-color .2s,box-shadow .2s;flex:1;min-height:0}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);outline:none}
+textarea::placeholder{color:var(--dim)}
+#topic-area{min-height:100px}
+#content-area{min-height:160px}
+
+/* quick topic pills */
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 4px;flex-shrink:0}
+.pill{padding:4px 12px;border:1px solid rgba(124,111,255,.25);border-radius:20px;
+      background:rgba(124,111,255,.07);color:var(--accent3);font-size:.76rem;
+      cursor:pointer;transition:all .18s;white-space:nowrap}
+.pill:hover{background:rgba(124,111,255,.2);border-color:var(--accent);color:#fff}
+
+/* generate bar */
+.gen-bar{padding:14px 20px 16px;display:flex;gap:10px;flex-shrink:0;align-items:center}
+.btn-gen{flex:1;background:linear-gradient(135deg,var(--accent),#9b90ff);
+         border:none;border-radius:10px;color:#fff;font-family:inherit;
+         font-size:.95rem;font-weight:700;padding:13px;cursor:pointer;
+         transition:all .25s;box-shadow:0 4px 18px var(--glow);
+         display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-gen:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px);
+                               box-shadow:0 6px 24px var(--glow)}
+.btn-gen:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+         border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.spinner.on{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-clear{padding:12px 16px;background:transparent;border:1px solid var(--border2);
+           border-radius:10px;color:var(--muted);font-family:inherit;font-size:.85rem;
+           cursor:pointer;transition:all .18s}
+.btn-clear:hover{background:rgba(124,111,255,.1);color:var(--text)}
+
+/* history panel */
+.history-section{border-top:1px solid var(--border);flex-shrink:0;max-height:190px;overflow-y:auto}
+.history-header{display:flex;align-items:center;justify-content:space-between;
+                padding:10px 20px 6px;font-size:.72rem;font-weight:700;
+                letter-spacing:.08em;text-transform:uppercase;color:var(--accent2)}
+.note-list{padding:0 12px 10px}
+.note-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;
+           cursor:pointer;transition:background .15s;font-size:.8rem}
+.note-item:hover{background:var(--bg1)}
+.note-item .ni-icon{font-size:1rem;flex-shrink:0}
+.note-item .ni-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.note-item .ni-ts{color:var(--muted);font-size:.72rem;flex-shrink:0}
+.note-item .ni-open{color:var(--accent2);font-size:.72rem;flex-shrink:0;text-decoration:none;
+                    padding:2px 6px;border:1px solid rgba(124,111,255,.25);border-radius:6px;transition:all .15s}
+.note-item .ni-open:hover{background:rgba(124,111,255,.15)}
+
+/* ═══ RIGHT — output ═══ */
+.right-col{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+.out-toolbar{display:flex;align-items:center;justify-content:space-between;
+             padding:10px 18px;border-bottom:1px solid var(--border);
+             background:var(--bg1);flex-shrink:0;gap:10px}
+.view-tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);
+           border-radius:var(--r-sm);padding:3px}
+.vtab{padding:5px 14px;border-radius:6px;font-size:.79rem;font-weight:500;
+      color:var(--muted);cursor:pointer;transition:all .18s;user-select:none}
+.vtab.active{background:var(--accent);color:#fff}
+.out-status{font-size:.74rem;font-family:'JetBrains Mono',monospace;color:var(--muted);
+            flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* progress */
+.prog-wrap{height:2px;background:transparent;flex-shrink:0}
+.prog{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent3));
+      transition:width .12s linear;border-radius:2px}
+@keyframes prog-pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.prog.animating{animation:prog-pulse 1.4s infinite}
+
+/* output panels */
+.out-area{flex:1;position:relative;overflow:hidden}
+
+/* placeholder */
+#ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:14px;background:var(--bg);padding:24px}
+.ph-icon{font-size:3rem;animation:float 3.5s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.ph-title{font-size:1.05rem;font-weight:700;color:var(--accent2)}
+.ph-sub{font-size:.83rem;color:var(--muted);text-align:center;max-width:300px;line-height:1.5}
+.ph-pills{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:6px}
+.ph-pill{padding:4px 11px;background:rgba(124,111,255,.1);border:1px solid var(--border);
+         color:var(--accent3);border-radius:20px;font-size:.73rem}
+
+/* live streaming output */
+#stream-box{position:absolute;inset:0;overflow-y:auto;padding:20px;display:none;
+            background:var(--bg);font-family:'JetBrains Mono',monospace;
+            font-size:.78rem;color:#cdd6f4;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+
+/* iframe preview */
+#preview{position:absolute;inset:0;border:none;width:100%;height:100%;display:none;background:#fff}
+
+/* raw HTML view */
+#raw-view{position:absolute;inset:0;overflow:auto;background:#0a0a14;display:none}
+#raw-code{padding:20px;font-family:'JetBrains Mono',monospace;font-size:.77rem;
+          color:#cdd6f4;white-space:pre-wrap;word-break:break-all;line-height:1.65}
+
+/* action btns */
+.out-actions{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);
+             flex-shrink:0;background:var(--bg1)}
+.act-btn{padding:7px 14px;background:transparent;border:1px solid var(--border2);
+         border-radius:var(--r-sm);color:var(--muted);font-family:inherit;font-size:.79rem;
+         cursor:pointer;transition:all .18s;text-decoration:none;display:inline-flex;
+         align-items:center;gap:5px}
+.act-btn:hover{background:rgba(124,111,255,.1);color:var(--text);border-color:var(--accent2)}
+.act-btn.primary{background:rgba(124,111,255,.15);color:var(--accent3);border-color:var(--accent2)}
+#out-actions{display:none}
+
+/* toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+       background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+       color:var(--text);padding:10px 20px;font-size:.84rem;
+       box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transition:all .3s ease;z-index:9999}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* modal confirmation for long content */
+.char-info{font-size:.74rem;color:var(--muted);padding:0 20px 4px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🎓</div>
+    <div>
+      <div class="brand-name">NotesMaster AI</div>
+      <div class="brand-v">Qwen3.5 · claw infrastructure · 100% local</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="status-pill">
+      <div class="dot" id="dot"></div>
+      <span id="status-txt">Checking…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BODY ══ -->
+<div class="body">
+
+  <!-- ═══ LEFT ═══ -->
+  <div class="left-col">
+
+    <!-- mode switch -->
+    <div class="mode-bar">
+      <button class="mode-btn active" id="m-topic"   onclick="setMode('topic')">📝 Type a Topic</button>
+      <button class="mode-btn"        id="m-paste"   onclick="setMode('paste')">📋 Paste Content</button>
+      <button class="mode-btn"        id="m-upload"  onclick="setMode('upload')">📁 Upload PDF / File</button>
+    </div>
+    <div class="mode-desc" id="mode-desc">
+      Type any subject, concept, or question — AI builds complete notes from scratch.
+    </div>
+
+    <!-- input area (dynamic) -->
+    <div class="input-wrap" id="input-wrap">
+
+      <!-- TOPIC mode -->
+      <div id="panel-topic">
+        <textarea id="topic-area" rows="5"
+          placeholder="Type your topic here…
+
+Examples:
+• Python Decorators and Closures
+• How does TCP/IP work internally?
+• Gradient Descent — intuition to math
+• SOLID Principles in OOP
+• How Black Holes form
+
+Press Ctrl+Enter to generate"></textarea>
+        <div class="pill-row" style="margin-top:8px">
+          <span class="pill" onclick="setTopic(this)">Python Decorators</span>
+          <span class="pill" onclick="setTopic(this)">Transformer Attention</span>
+          <span class="pill" onclick="setTopic(this)">Gradient Descent</span>
+          <span class="pill" onclick="setTopic(this)">TCP/IP Networking</span>
+          <span class="pill" onclick="setTopic(this)">SQL Window Functions</span>
+          <span class="pill" onclick="setTopic(this)">Binary Search Tree</span>
+          <span class="pill" onclick="setTopic(this)">SOLID Principles</span>
+          <span class="pill" onclick="setTopic(this)">Dynamic Programming</span>
+          <span class="pill" onclick="setTopic(this)">React useEffect</span>
+          <span class="pill" onclick="setTopic(this)">Docker & Containers</span>
+          <span class="pill" onclick="setTopic(this)">OS Process Scheduling</span>
+          <span class="pill" onclick="setTopic(this)">Backpropagation</span>
+        </div>
+      </div>
+
+      <!-- PASTE mode -->
+      <div id="panel-paste" style="display:none;height:100%;display:none;flex-direction:column;gap:4px">
+        <div class="char-info" id="char-info">0 characters</div>
+        <textarea id="content-area" style="flex:1"
+          placeholder="Paste any text here to convert into structured notes:
+
+• Lecture slides content
+• Book chapter or article
+• Research paper excerpt
+• YouTube transcript
+• Meeting notes
+• Any raw information
+
+AI will organize everything into a proper study guide."></textarea>
+      </div>
+
+      <!-- UPLOAD mode -->
+      <div id="panel-upload" style="display:none">
+        <div id="drop-zone">
+          <input type="file" id="file-input" accept=".pdf,.txt,.md,.doc"/>
+          <div class="dz-icon">📄</div>
+          <div class="dz-title">Drop your file here</div>
+          <div class="dz-sub">Supports PDF, TXT, MD · Click to browse</div>
+        </div>
+        <div id="file-badge">
+          <span>📎</span>
+          <span class="fb-name" id="fb-name">—</span>
+          <span class="char-info" id="fb-chars" style="padding:0"></span>
+          <span class="fb-remove" onclick="clearFile()">✕</span>
+        </div>
+        <div id="upload-hint" style="font-size:.78rem;color:var(--muted);margin-top:8px;display:none">
+          ✅ File extracted. Click Generate Notes to create your study guide.
+        </div>
+      </div>
+
+    </div><!-- /input-wrap -->
+
+    <!-- model + generate -->
+    <div class="gen-bar">
+      <select id="model-sel" style="background:var(--bg1);border:1px solid var(--border);
+              border-radius:var(--r-sm);color:var(--text);font-family:inherit;
+              font-size:.82rem;padding:8px 10px;cursor:pointer">
+        <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
+        <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
+        <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
+        <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
+      </select>
+      <button class="btn-gen" id="gen-btn" onclick="generate()">
+        <div class="spinner" id="spinner"></div>
+        <span id="gen-label">✨ Generate Notes</span>
+      </button>
+      <button class="btn-clear" onclick="clearAll()">✕</button>
+    </div>
+
+    <!-- history -->
+    <div class="history-section">
+      <div class="history-header">
+        <span>📂 Recent Notes</span>
+        <span id="hist-count" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">—</span>
+      </div>
+      <div class="note-list" id="note-list">
+        <div style="padding:6px 8px;font-size:.79rem;color:var(--muted)">No notes yet</div>
+      </div>
+    </div>
+
+  </div><!-- /left-col -->
+
+  <!-- ═══ RIGHT ═══ -->
+  <div class="right-col">
+
+    <div class="out-toolbar">
+      <div class="view-tabs">
+        <div class="vtab active" onclick="setView('preview')">🖥 Preview</div>
+        <div class="vtab"        onclick="setView('stream')">⚡ Live</div>
+        <div class="vtab"        onclick="setView('raw')">📋 HTML</div>
+      </div>
+      <div class="out-status" id="out-status">Ready — choose a mode and generate notes</div>
+    </div>
+
+    <div class="prog-wrap"><div class="prog" id="prog"></div></div>
+
+    <div class="out-area">
+      <!-- placeholder -->
+      <div id="ph">
+        <div class="ph-icon">🎓</div>
+        <div class="ph-title">NotesMaster AI</div>
+        <div class="ph-sub">Generate structured study notes from any topic, pasted content, or uploaded file</div>
+        <div class="ph-pills">
+          <span class="ph-pill">✔ Any subject</span>
+          <span class="ph-pill">✔ PDF / text input</span>
+          <span class="ph-pill">✔ 13-step flow</span>
+          <span class="ph-pill">✔ Code + diagrams</span>
+          <span class="ph-pill">✔ 100% local</span>
+        </div>
+      </div>
+      <!-- live stream text -->
+      <div id="stream-box"></div>
+      <!-- iframe preview -->
+      <iframe id="preview" title="Note preview" sandbox="allow-same-origin"></iframe>
+      <!-- raw html -->
+      <div id="raw-view"><pre id="raw-code"></pre></div>
+    </div>
+
+    <div class="out-actions" id="out-actions">
+      <button class="act-btn primary" onclick="copyHtml()">📋 Copy HTML</button>
+      <a class="act-btn"   id="dl-btn"   href="#" download>⬇ Download</a>
+      <a class="act-btn"   id="open-btn" href="#" target="_blank">🔗 Open in Browser</a>
+    </div>
+
+  </div><!-- /right-col -->
+</div><!-- /body -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ─── state ─── */
+const S = {
+  mode:'topic',       // topic | paste | upload
+  model:'qwen3.5:4b',
+  view:'preview',
+  html:'',
+  noteFile:null,
+  fileContent:'',
+  fileName:'',
+  generating:false,
+  sessionId:null,
+};
+
+/* ─── utils ─── */
+const $=id=>document.getElementById(id);
+function toast(m,d=3200){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function setStatus(m,c=''){$('out-status').textContent=m;$('out-status').style.color=c||''}
+function setProg(p){const el=$('prog');el.style.width=p+'%';
+  if(p>0&&p<100)el.classList.add('animating');else el.classList.remove('animating');
+  if(p>=100)setTimeout(()=>{el.style.width='0';},700)}
+
+/* ─── mode ─── */
+const MODE_DESC={
+  topic:'Type any subject, concept, or question — AI builds complete structured notes from scratch.',
+  paste:'Paste any raw text — articles, lecture notes, transcripts, book chapters — AI converts it into organized study notes.',
+  upload:'Upload a PDF or text file — AI extracts the content and creates a complete structured study guide from it.'
+};
+function setMode(m){
+  S.mode=m;
+  ['topic','paste','upload'].forEach(x=>{
+    $('m-'+x).classList.toggle('active',x===m);
+    $('panel-'+x).style.display=x===m?(m==='paste'?'flex':'block'):'none';
+  });
+  $('mode-desc').textContent=MODE_DESC[m];
+}
+// fix paste panel display
+$('panel-paste').style.cssText='display:none;flex-direction:column;gap:4px;height:100%';
+$('panel-upload').style.display='none';
+$('panel-topic').style.display='block';
+
+/* ─── char counter ─── */
+$('content-area').addEventListener('input',()=>{
+  const n=$('content-area').value.length;
+  $('char-info').textContent=n.toLocaleString()+' characters'+(n>8000?' (will be truncated to 8000)':'');
+});
+
+/* ─── quick pills ─── */
+function setTopic(el){$('topic-area').value=el.textContent;$('topic-area').focus()}
+
+/* ─── file upload ─── */
+const dz=$('drop-zone');
+dz.addEventListener('click',()=>$('file-input').click());
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFile(e.dataTransfer.files[0])});
+$('file-input').addEventListener('change',e=>handleFile(e.target.files[0]));
+
+async function handleFile(f){
+  if(!f)return;
+  setStatus('📤 Uploading '+f.name+'…');
+  const fd=new FormData();fd.append('file',f);
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.error){toast('❌ '+d.error);return}
+    S.fileContent=d.text;
+    S.fileName=d.name;
+    $('fb-name').textContent=d.name;
+    $('fb-chars').textContent=d.chars.toLocaleString()+' chars';
+    $('file-badge').style.display='flex';
+    dz.style.display='none';
+    $('upload-hint').style.display='block';
+    setStatus('✅ '+d.name+' ready ('+d.chars.toLocaleString()+' chars)');
+    toast('✅ '+d.name+' loaded');
+  }catch(e){toast('❌ Upload failed: '+e.message)}
+}
+
+function clearFile(){
+  S.fileContent='';S.fileName='';
+  $('file-badge').style.display='none';
+  $('upload-hint').style.display='none';
+  dz.style.display='flex';
+  $('file-input').value='';
+  setStatus('Ready');
+}
+
+/* ─── view tabs ─── */
+function setView(v){
+  S.view=v;
+  document.querySelectorAll('.vtab').forEach((t,i)=>t.classList.toggle('active',['preview','stream','raw'][i]===v));
+  $('ph').style.display='none';
+  if(!S.html){$('ph').style.display='flex';return}
+  $('preview').style.display=v==='preview'?'block':'none';
+  $('stream-box').style.display=v==='stream'?'block':'none';
+  $('raw-view').style.display=v==='raw'?'block':'none';
+}
+
+/* ─── status check ─── */
+async function checkStatus(){
+  try{
+    const r=await fetch('/api/status');
+    const d=await r.json();
+    if(d.ok){
+      $('dot').className='dot ok';
+      const q=d.qwen_models.slice(0,2).join(', ')||'none';
+      $('status-txt').textContent='✅ '+q;
+    }else{$('dot').className='dot err';$('status-txt').textContent='❌ Ollama offline'}
+  }catch{$('dot').className='dot err';$('status-txt').textContent='❌ Server offline'}
+}
+checkStatus();setInterval(checkStatus,30000);
+
+/* ─── load history ─── */
+async function loadHistory(){
+  const r=await fetch('/api/notes');
+  const d=await r.json();
+  $('hist-count').textContent=d.notes.length+' saved';
+  if(!d.notes.length){$('note-list').innerHTML='<div style="padding:6px 8px;font-size:.79rem;color:var(--muted)">No notes yet</div>';return}
+  $('note-list').innerHTML=d.notes.map(n=>`
+    <div class="note-item" onclick="loadNote('${n.name}')">
+      <span class="ni-icon">📄</span>
+      <span class="ni-name">${n.name.replace(/_\d{8}_\d{6}\.html$/,'').replace(/_/g,' ')}</span>
+      <span class="ni-ts">${n.ts}</span>
+      <a class="ni-open" href="/api/notes/${n.name}" target="_blank" onclick="event.stopPropagation()">↗</a>
+    </div>`).join('');
+}
+loadHistory();
+
+async function loadNote(name){
+  const r=await fetch('/api/notes/'+name);
+  S.html=await r.text();
+  showResult(name);
+  toast('📄 Loaded: '+name.replace(/_\d{8}_\d{6}\.html$/,'').replace(/_/g,' '));
+}
+
+/* ─── generate ─── */
+async function generate(){
+  if(S.generating)return;
+
+  // determine input
+  let mode=S.mode,topic='',content='',srcName='';
+  if(mode==='topic'){
+    topic=$('topic-area').value.trim();
+    if(!topic){toast('⚠️ Please type a topic');$('topic-area').focus();return}
+  } else if(mode==='paste'){
+    content=$('content-area').value.trim().slice(0,8000);
+    if(!content){toast('⚠️ Please paste some content');$('content-area').focus();return}
+    srcName='pasted text';
+    mode='content';
+  } else {
+    if(!S.fileContent){toast('⚠️ Please upload a file first');return}
+    content=S.fileContent.slice(0,8000);
+    srcName=S.fileName;
+    mode='content';
+  }
+
+  S.generating=true;
+  $('gen-btn').disabled=true;
+  $('spinner').classList.add('on');
+  $('gen-label').textContent='Generating…';
+  setProg(5);
+  $('out-actions').style.display='none';
+
+  // show live stream view
+  $('ph').style.display='none';
+  $('preview').style.display='none';
+  $('raw-view').style.display='none';
+  $('stream-box').style.display='block';
+  $('stream-box').textContent='';
+  setView('stream');
+
+  const body={mode,topic,content,source_name:srcName,model:S.model,session_id:S.sessionId};
+  const label=topic||srcName||'content';
+  setStatus(`🚀 Generating notes for: ${label.slice(0,50)}…`,'#a59bff');
+
+  let chunks=[];
+  let prog=8;
+  const pt=setInterval(()=>{if(prog<88){prog+=.6;setProg(prog)}},350);
+
+  try{
+    const resp=await fetch('/api/generate',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const reader=resp.body.getReader();
+    const dec=new TextDecoder();
+    let buf='';
+
+    while(true){
+      const{done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        try{
+          const ev=JSON.parse(line.slice(6));
+          if(ev.type==='meta'){S.sessionId=ev.session_id;setStatus(`⚡ ${ev.model} · ${ev.mode} mode`)}
+          else if(ev.type==='chunk'){
+            chunks.push(ev.text);
+            $('stream-box').textContent=chunks.join('');
+            $('stream-box').scrollTop=$('stream-box').scrollHeight;
+          }
+          else if(ev.type==='done'){
+            clearInterval(pt);setProg(100);
+            const html=chunks.join('').trim()
+              .replace(/^```html\n?/,'').replace(/^```\n?/,'').replace(/\n?```$/,'').trim();
+            S.html=html;S.noteFile=ev.note_file;
+            showResult(ev.note_file);
+            setStatus(`✅ Done in ${ev.elapsed}s · saved: ${ev.note_file}`);
+            toast(`✅ Notes ready (${ev.elapsed}s)`);
+            loadHistory();
+          }
+        }catch{}
+      }
+    }
+  }catch(e){
+    clearInterval(pt);setProg(0);
+    setStatus('❌ Error: '+e.message,'#ef4444');
+    toast('❌ Failed: '+e.message);
+    $('ph').style.display='flex';
+    $('stream-box').style.display='none';
+  }finally{
+    S.generating=false;
+    $('gen-btn').disabled=false;
+    $('spinner').classList.remove('on');
+    $('gen-label').textContent='✨ Generate Notes';
+  }
+}
+
+function showResult(fname){
+  // render iframe
+  const blob=new Blob([S.html],{type:'text/html'});
+  $('preview').src=URL.createObjectURL(blob);
+  // raw code
+  $('raw-code').textContent=S.html;
+  // set download
+  $('dl-btn').href='/api/notes/'+fname;
+  $('dl-btn').download=fname;
+  $('open-btn').href='/api/notes/'+fname;
+  $('out-actions').style.display='flex';
+  setView('preview');
+}
+
+/* ─── clear ─── */
+function clearAll(){
+  $('topic-area').value='';
+  $('content-area').value='';
+  clearFile();
+  S.html='';S.noteFile=null;
+  $('stream-box').style.display='none';
+  $('preview').style.display='none';
+  $('raw-view').style.display='none';
+  $('out-actions').style.display='none';
+  $('ph').style.display='flex';
+  setProg(0);
+  setStatus('Ready — choose a mode and generate notes');
+  toast('Cleared');
+}
+
+/* ─── copy HTML ─── */
+function copyHtml(){
+  navigator.clipboard.writeText(S.html).then(()=>toast('✅ HTML copied!'));
+}
+
+/* ─── keyboard shortcut ─── */
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generate();
+});
+
+/* ─── model selector ─── */
+$('model-sel').addEventListener('change',e=>S.model=e.target.value);
+</script>
+</body>
+</html>

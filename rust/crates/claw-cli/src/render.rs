@@ -1,9 +1,9 @@
-use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
+use std::fmt::Write as FmtWrite;
 
 use crossterm::cursor::{MoveToColumn, RestorePosition, SavePosition};
-use crossterm::style::{Color, Print, ResetColor, SetForegroundColor, Stylize};
 use crossterm::terminal::{Clear, ClearType};
+use crossterm::style::{Color, Print, ResetColor, SetForegroundColor, Stylize};
 use crossterm::{execute, queue};
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use syntect::easy::HighlightLines;

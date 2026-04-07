@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use std::ffi::OsString;
 use std::sync::Arc;
 use std::sync::{Mutex as StdMutex, OnceLock};
 
 use api::{
+    use std::collections::HashMap;
     ContentBlockDelta, ContentBlockDeltaEvent, ContentBlockStartEvent, ContentBlockStopEvent,
     InputContentBlock, InputMessage, MessageRequest, OpenAiCompatClient, OpenAiCompatConfig,
     OutputContentBlock, ProviderClient, StreamEvent, ToolChoice, ToolDefinition,

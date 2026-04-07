@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>न्यूरल नेटवर्क: आर्किटेक्चर और फॉरवर्ड प्रोपेगेशन - पढ़ाई का गाइड</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h1 { margin: 0; font-size: 1.8rem; }
+        h2 { color: #2980b9; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px;}
+        h3 { color: #e67e22; margin-top: 25px;}
+        .step-box {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .code-snippet {
+            background-color: #2d3436;
+            color: #a4b0be;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+        }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        .highlight {
+            background-color: #f1f8ff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>न्यूरल नेटवर्क: आर्किटेक्चर और फॉरवर्ड प्रोपेगेशन</h1>
+    <p>आपका पूर्ण HTML अध्ययन गाइड (नमूना हिंदी)</p>
+</header>
+
+<article>
+
+    <!-- CONCEPT 1: NEURAL NETWORK INITIALIZATION -->
+    <section id="concept-1">
+        <h2>महत्वपूर्ण अवधारणा 1: नेटवर्क आर्किटेक्चर और वेट्स/बायस की सृजन (Initialization)</h2>
+        
+        <!-- Step 1: Introduction -->
+        <div class="step-box">
+            <h3>1. परिचय (Introduction)</h3>
+            <p>यह कंसेप्ट हमें बताता है कि न्यूरल नेटवर्क का शुरुआती सेटअप कैसे होता है। एक नेटवर्क केवल डेटा को पास करने के लिए नहीं, बल्कि उसे सीखने के लिए भी तैयार होना चाहिए।</p>
+        </div>
+
+        <!-- Step 2: The Problem -->
+        <div class="step-box">
+            <h3>2. समस्या (The Problem)</h3>
+            <p>अगर हम वेट्स (Weights) और बायस (Biases) को शून्य या कोई निश्चित मान देते हैं, तो नेटवर्क नए पैटर्न को पहचानने में असमर्थ रहेगा। उसे 'रैंडम' या 'अन्यतम' (Random) मानों की आवश्यकता होती है।</p>
+        </div>
+
+        <!-- Step 3: The Solution -->
+        <div class="step-box">
+            <h3>3. समाधान (The Solution)</h3>
+            <p>हम एक फंक्शन 'initialize_weights' का उपयोग करते हैं जो रैंडम वेट्स और बायस जनरेट करता है। यह नेटवर्क को 'सीखने के लिए' तैयार करता है।</p>
+        </div>
+
+        <!-- Step 4: Core Concepts -->
+        <div class="step-box">
+            <h3>4. मुख्य अवधारणाएँ (Core Concepts)</h3>
+            <ul>
+                <li><strong>Weights (W1, W2, W3, W4):</strong> इनपुट और आउटपुट के बीच संबंध को दर्शाते हैं।</li>
+                <li><strong>Biases (b):</strong> यह एक मूल्यांकन (offset) है जो नेटवर्क को शिफ्ट करने में मदद करता है।</li>
+                <li><strong>Random Initialization:</strong> वेट्स और बायस को रैंडम नंबर से भरना।</li>
+            </ul>
+        </div>
+
+        <!-- Step 5: Key Terminology -->
+        <div class="step-box">
+            <h3>5. मुख्य शब्दावली (Key Terminology)</h3>
+            <ul>
+                <li><strong>W1, W2, W3, W4:</strong> वेट्स मैट्रिक्स (Weights Matrices)।</li>
+                <li><strong>Biases:</strong> वेक्टर्स या स्केलर (Biases Vectors/Scalars)।</li>
+                <li><strong>Initialize:</strong> शून्य या रैंडम मान से शुरू करना।</li>
+            </ul>
+        </div>
+
+        <!-- Step 6: Step-by-Step Breakdown -->
+        <div class="step-box">
+            <h3>6. चरण-दर-चरण विभाजन (Step-by-Step Breakdown)</h3>
+            <ol>
+                <li>पहले हमें डेटा की संख्या (Inputs) और लैयर्स की संख्या पता करनी होगी।</li>
+                <li>फिर हम वेट्स को जनरेट करते हैं (जैसे W1, W2, W3, W4)।</li>
+                <li>बायस (Biases) को जनरेट किया जाता है।</li>
+                <li>अंत में, इन सभी को एक साथ जोड़कर नेटवर्क तैयार किया जाता है।</li>
+            </ol>
+        </div>
+
+        <!-- Step 7: Example -->
+        <div class="step-box">
+            <h3>7. उदाहरण (Example)</h3>
+            <p>जैसे-जैसे वीडियो में बताया गया है, हमें इनपुट्स की संख्या (जैसे 6 इनपुट्स या 322 इनपुट्स) को देखना होगा। फिर हम वेट्स को इनपुट्स की संख्या के आधार पर जनरेट करते हैं।</p>
+        </div>
+
+        <!-- Step 8: Application -->
+        <div class="step-box">
+            <h3>8. अनुप्रयोग (Application)</h3>
+            <p>इस प्रक्रिया का उपयोग हम करते हैं जब हम नए डेटा सेट पर नेटवर्क को 'प्रेडिक्शन' (Prediction) के लिए तैयार करते हैं।</p>
+        </div>
+
+        <!-- Step 9: Common Mistakes -->
+        <div class="step-box">
+            <h3>9. सामान्य गलतियाँ (Common Mistakes)</h3>
+            <ul>
+                <li>वेट्स को रैंडम नहीं बनाना (यह सीखने को रोकता है)।</li>
+                <li>बायस का उपयोग करना भूल जाना।</li>
+                <li>इनपुट्स की संख्या की गलत समझ।</li>
+            </ul>
+        </div>
+
+        <!-- Step 10: Best Practices -->
+        <div class="step-box">
+            <h3>10. सर्वोत्तम प्रथाएँ (Best Practices)</h3>
+            <p>हमेशा रैंडम वेट्स का उपयोग करें। यह सुनिश्चित करता है कि नेटवर्क हर बार अलग-अलग तरीके से शुरू होता है, जिससे उसे सीखने में मदद मिलती है।</p>
+        </div>
+
+        <!-- Step 11: Review/Quiz -->
+        <div class="step-box">
+            <h3>11. रिव्यू/क्विज़ (Review/Quiz)</h3>
+            <p><strong>प्रश्न:</strong> वेट्स और बायस को शून्य करने के बजाय क्या करना चाहिए?</p>
+            <p><strong>उत्तर:</strong> उन्हें रैंडम (Random) बनाना चाहिए।</p>
+        </div>
+
+        <!-- Step 12: Summary -->
+        <div class="step-box">
+            <h3>12. सारांश (Summary)</h3>
+            <p>नेटवर्क की आर्किटेक्चर बनाने के लिए हमें वेट्स और बायस की आवश्यकता होती है। इनका उपयोग करने के लिए, हम उन्हें रैंडम मानों से भरते हैं (Initialization)।</p>
+        </div>
+
+        <!-- Step 13: Conclusion -->
+        <div class="step-box">
+            <h3>13. निष्कर्ष (Conclusion)</h3>
+            <p>अब जब हमने आर्किटेक्चर और वेट्स को सृष्टि करने की प्रक्रिया समझी है, तो हम आगे बढ़कर उसी नेटवर्क का उपयोग करके फॉरवर्ड प्रोपेगेशन (Forward Propagation) को कैसे करते हैं, यह देखने के लिए तैयार हैं।</p>
+        </div>
+    </section>
+
+    <!-- CONCEPT 2: LINEAR FORWARD PROPAGATION -->
+    <section id="concept-2">
+        <h2>महत्वपूर्ण अवधारणा 2: लीनेर फॉरवर्ड प्रोपेगेशन (Linear Forward Propagation)</h2>
+        
+        <!-- Step 1: Introduction -->
+        <div class="step-box">
+            <h3>1. परिचय (Introduction)</h3>
+            <p>फॉरवर्ड प्रोपेगेशन वह प्रक्रिया है जिसमें नेटवर्क इनपुट डेटा को लेता है, उसे वेट्स और बायस के साथ जोड़ता है, और आउटपुट पैदा करता है।</p>
+        </div>
+
+        <!-- Step 2: The Problem -->
+        <div class="step-box">
+            <h3>2. समस्या (The Problem)</h3>
+            <p>एक लीनेर नेटवर्क केवल इनपुट और वेट्स के आधार पर आउटपुट कैसे निकालता है, यह समझना। (उदाहरण के लिए: 6 इनपुट्स के साथ कैसे काम करता है? या 322 इनपुट्स के साथ?)</p>
+        </div>
+
+        <!-- Step 3: The Solution -->
+        <div class="step-box">
+            <h3>3. समाधान (The Solution)</h3>
+            <p>हम एक फंक्शन 'linear_forward' का उपयोग करते हैं। यह फंक्शन इनपुट, वेट्स और बायस को लेता है और उन्हें एक साथ जोड़ता है।</p>
+        </div>
+
+        <!-- Step 4: Core Concepts -->
+        <div class="step-box">
+            <h3>4. मुख्य अवधारणाएँ (Core Concepts)</h3>
+            <ul>
+                <li><strong>Input (X):</strong> नेटवर्क के अंदर जाने वाला डेटा (जैसे 6 या 322 इनपुट्स)।</li>
