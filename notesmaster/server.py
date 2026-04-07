@@ -39,7 +39,7 @@ from src.system_init import build_system_init_message
 OLLAMA_URL    = os.environ.get("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_KEY    = os.environ.get("OPENAI_API_KEY",  "ollama")
 HF_TOKEN      = os.environ.get("HF_TOKEN", "")
-HF_MODEL      = os.environ.get("HF_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+HF_MODEL      = os.environ.get("HF_MODEL", "Qwen/Qwen3-8B")
 DEFAULT_MODEL = os.environ.get("NOTES_MODEL", "qwen3.5:4b")
 PORT          = int(os.environ.get("PORT", 7860))
 
@@ -414,7 +414,7 @@ def generate():
     )
 
 
-@app.route("/api/notes")
+@app.route("/api/notes", methods=["GET"])
 def list_notes():
     notes = []
     for f in sorted(NOTES_DIR.glob("*.html"), reverse=True)[:30]:
@@ -426,9 +426,37 @@ def list_notes():
     return jsonify({"notes": notes})
 
 
-@app.route("/api/notes/<filename>")
+@app.route("/api/notes", methods=["DELETE"])
+def delete_all_notes():
+    """Delete every saved note HTML file."""
+    deleted = 0
+    for f in NOTES_DIR.glob("*.html"):
+        try:
+            f.unlink()
+            deleted += 1
+        except Exception:
+            pass
+    return jsonify({"deleted": deleted})
+
+
+@app.route("/api/notes/<filename>", methods=["GET"])
 def get_note(filename):
     return send_from_directory(str(NOTES_DIR), filename)
+
+
+@app.route("/api/notes/<filename>", methods=["DELETE"])
+def delete_note(filename):
+    """Delete a single saved note by filename."""
+    # Sanitise: only allow plain filenames (no path traversal)
+    safe = Path(filename).name
+    target = NOTES_DIR / safe
+    if not target.exists():
+        return jsonify({"error": "Not found"}), 404
+    try:
+        target.unlink()
+        return jsonify({"deleted": safe})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/sessions")

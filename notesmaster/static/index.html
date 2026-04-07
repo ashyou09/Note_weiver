@@ -547,6 +547,23 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
   white-space: nowrap;
 }
 .note-row .nr-ts { font-size: .68rem; color: var(--muted); flex-shrink: 0; }
+.note-row .nr-del {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .85rem;
+  border-radius: 4px;
+  transition: all .15s;
+  flex-shrink: 0;
+  opacity: 0;
+  padding: 0;
+}
+.note-row:hover .nr-del { opacity: 1; }
+.note-row .nr-del:hover { color: var(--red); background: rgba(248,113,113,.1); }
+
 .note-row .nr-link {
   font-size: .68rem;
   color: var(--accent2);
@@ -957,11 +974,16 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
     <div class="gen-bar">
       <div class="model-select-wrapper">
         <select id="model-sel">
-          <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
-          <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
-          <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
-          <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
-          <option value="Qwen/Qwen2.5-7B-Instruct">HF Qwen2.5-7B ☁️</option>
+          <optgroup label="── Local (Ollama) ──">
+            <option value="qwen3.5:4b">qwen3.5:4b ✅</option>
+            <option value="qwen3.5:2b">qwen3.5:2b ⚡</option>
+            <option value="qwen3.5:9b">qwen3.5:9b 💪</option>
+            <option value="qwen3.5:0.8b">qwen3.5:0.8b 🪶</option>
+          </optgroup>
+          <optgroup label="── HF Cloud ☁️ ──">
+            <option value="Qwen/Qwen3-8B">Qwen3-8B 🆕 Cloud</option>
+            <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B Cloud</option>
+          </optgroup>
         </select>
       </div>
       <button class="btn-generate" id="gen-btn" onclick="generate()">
@@ -975,7 +997,15 @@ textarea::placeholder { color: var(--dim); line-height: 1.8; }
     <div class="history">
       <div class="history-head">
         <div class="history-title">📂 Recent Notes</div>
-        <div class="history-count" id="history-count">—</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="history-count" id="history-count"></div>
+          <button id="clear-notes-btn" onclick="clearAllNotes()" title="Delete all notes"
+            style="display:none;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:5px;
+                   color:var(--red);font-size:.66rem;font-weight:600;padding:2px 7px;cursor:pointer;
+                   transition:all .18s;font-family:inherit;letter-spacing:.03em">
+            🗑 Clear All
+          </button>
+        </div>
       </div>
       <div class="history-list" id="history-list">
         <div class="no-notes">No notes yet — generate your first!</div>
@@ -1249,18 +1279,52 @@ async function loadHistory() {
       $('history-list').innerHTML = '<div class="no-notes">No notes yet — generate your first!</div>';
       return;
     }
+    $('clear-notes-btn').style.display = d.notes.length ? '' : 'none';
     $('history-list').innerHTML = d.notes.map(n => {
       const label = n.name.replace(/_\d{8}_\d{6}\.html$/, '').replace(/_/g, ' ');
-      return `<div class="note-row" onclick="loadNote('${n.name}')">
+      return `<div class="note-row" onclick="loadNote('${n.name}')" id="nr-${n.name}">
         <span class="nr-icon">📄</span>
         <span class="nr-name" title="${label}">${label}</span>
         <span class="nr-ts">${n.ts}</span>
         <a class="nr-link" href="/api/notes/${n.name}" target="_blank" onclick="event.stopPropagation()">↗</a>
+        <button class="nr-del" title="Delete" onclick="event.stopPropagation();deleteNote('${n.name}')">🗑</button>
       </div>`;
     }).join('');
   } catch {}
 }
 loadHistory();
+
+async function deleteNote(name) {
+  if (!confirm('Delete this note?')) return;
+  try {
+    const r = await fetch('/api/notes/' + name, { method: 'DELETE' });
+    if (!r.ok) { toast('❌ Could not delete note'); return; }
+    // if currently viewing this note, clear the view
+    if (S.noteFile === name) {
+      S.html = ''; S.noteFile = null;
+      showPlaceholder();
+      $('out-actions').style.display = 'none';
+      setStatus('Ready — deleted note cleared');
+    }
+    toast('🗑 Note deleted');
+    loadHistory();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function clearAllNotes() {
+  if (!confirm('Delete ALL saved notes? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/notes', { method: 'DELETE' });
+    if (!r.ok) { toast('❌ Could not clear notes'); return; }
+    S.html = ''; S.noteFile = null;
+    showPlaceholder();
+    $('out-actions').style.display = 'none';
+    $('clear-notes-btn').style.display = 'none';
+    setStatus('Ready — all notes cleared');
+    toast('🗑 All notes deleted');
+    loadHistory();
+  } catch (e) { toast('❌ ' + e.message); }
+}
 
 async function loadNote(name) {
   try {
