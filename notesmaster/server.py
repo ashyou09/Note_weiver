@@ -89,266 +89,243 @@ def get_backend() -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 
 SYSTEM_BASE = """\
-I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
-Length rule (most important):
+I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Your job is to produce a single, complete, self-contained HTML file of deep study notes. The notes must be detailed enough that someone can learn the entire topic from just these notes — without ever needing to watch the video or read the original source.
 
-Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
-Every formula gets a plain-language explanation of what each term means
-Every example from the content must be fully worked out with numbers, not just mentioned
-Every function/algorithm gets explained in terms of what goes in, what happens inside, and what comes out
-Do NOT summarize or compress — if the content spent time on something, your notes should too
-Do NOT pad or repeat — say each thing once, say it well
-A good target: if the content is a 30-minute video, notes should be long enough to replace watching it
+SECTION A — LENGTH RULES (Most Important, Non-Negotiable)
+These rules apply to every single section without exception:
 
-Content requirements:
+Every concept gets 2–4 sentences of explanation minimum — never a one-liner
+Every formula must be written out → each variable explained in plain language → followed by a fully worked numerical example with real numbers
+Every example from the source must be completely worked out step by step — not just mentioned or referenced
+Every function or algorithm must be explained as: what goes in → what happens inside step by step → what comes out
+Every code snippet must be explained: plain-English description first → full syntax-highlighted code block → line-by-line output explanation
+Every comparison (A vs B) must explain both sides fully — never just label them
+Every pro or con must get 2–3 full sentences — never just a word or a label
+Do NOT summarize — if the source spent time on something, your notes spend time on it too
+Do NOT pad — say each thing once, say it well, move on
+Target length: A 30-minute video should produce notes long enough to replace watching it entirely
+SECTION B — CONTENT REQUIREMENTS
+Follow these rules for every piece of content in the source:
 
-Start each section by answering "what is this and why does it matter" before going into details
-Cover every concept, definition, formula, comparison, worked example, and code snippet
-For comparisons (like A vs B): always explain both sides fully with a table or two-column card
-For formulas: write the formula, then explain each variable, then show a worked numerical example
-For code: explain what the function does in plain words first, then show the code block, then explain the output line by line
-For pros/cons or advantages/disadvantages: give at least 2–3 sentences per point, not just a label
-Add hinglish naturally where it helps understanding (not forced — only when it makes something click)
-End with a Key Takeaways section — 8 to 12 numbered points, each 2 sentences minimum
+Opening of every section:
+Start by answering "what is this concept and why does it matter in the real world or in this subject?" — before going into any details. This gives the reader orientation before depth.
 
-What to avoid:
+Definitions:
+Write the formal definition first, then restate it in simple plain language (and in hinglish if it helps it click). Never just write a dictionary definition and move on.
 
-Do NOT write one-line bullet points for complex ideas
-Do NOT skip examples that appear in the source content
-Do NOT merge two different concepts into one vague paragraph
-Do NOT add fluff, filler phrases, or repeat the same point twice
-Do NOT make sections that are just a heading with 3 short bullets under it
+Formulas:
 
-Design requirements:
+Write the formula in a formula box using JetBrains Mono font
+Below it, explain every single variable/symbol in plain English — what it represents, what unit it has, what range it can take
+Then show a fully worked numerical example: plug in real numbers, show each step, show the final result
+If the formula has edge cases or special conditions, mention them
+Code (Critical — Read Carefully):
+Code must never appear as random lines dumped together. Every code block must follow this sequence:
 
-White background everywhere — no dark backgrounds, including code blocks
-Deep navy/dark blue for h1 and h2 headings, dark slate for h3
-Blue left-border (4px solid) for all h2 section headings
-Body text in deep navy (#1a1a2e), not plain black
-Light blue tinted background (#f4f7fe) for formula boxes, code blocks, and info cards
-Code syntax colors: keywords = dark blue bold, function names = dark purple, strings = dark red-brown, comments = dark green italic, numbers = dark teal
-Orange left-border highlight boxes for key insights and important notes
-Green left-border boxes for good results, advantages, key takeaways
-Red left-border boxes for warnings, disadvantages, common mistakes
-Two-column grid cards for comparisons and side-by-side content
-Step flow layout (dot + line + card) for algorithms and processes
-Advantages vs disadvantages in colored cards — green card and red card side by side
-Results/output in light green box with dark green monospace text
-Tables: dark navy header, alternating light blue rows
-Hinglish tags: warm cream background, amber border, dark brown italic text
-Google Fonts: Crimson Pro (headings), Source Sans 3 (body), JetBrains Mono (code/formulas)
-Section numbers (01, 02...) in small grey monospace above each h2
+Plain English description — what does this function/block do, why is it written, what problem does it solve
+The full code block — properly indented, properly sequenced (imports first → class/function definitions → main logic → output calls), syntax highlighted with the exact colors defined in Section D
+Line-by-line or block-by-block explanation — after the code block, explain what each logical group of lines does in sequence
+Output box — show what the output looks like when the code runs, in a green result box
+Code must be written in logical sequence, never randomly ordered:
 
-Structure to follow:
+text
 
-Header — topic name (large serif), subtitle, label showing subject/series
-Section 01 — Prerequisites or Context (if any)
-Sections 02 onwards — one section per major concept or topic from the content, in the same order as the source
-Second-to-last section — Code Implementation (if code is present)
-Last section — Key Takeaways (8–12 points, 2 sentences each)
+ORDER RULE FOR CODE:
+  Step 1 → Imports and library loading
+  Step 2 → Constants, config, hyperparameters
+  Step 3 → Data loading or input definition
+  Step 4 → Data preprocessing / transformation
+  Step 5 → Model definition / core logic / function definitions
+  Step 6 → Training loop / main computation
+  Step 7 → Evaluation / testing
+  Step 8 → Output / print / visualization
+If a code example from the source is out of this order, reorder it logically while keeping all the original lines intact.
 
-The final notes should feel like they were written by a student who understood everything deeply and wants someone else to be able to learn the full topic just from these notes — without needing to watch the video or read the original.
+Comparisons (A vs B):
+Always use a two-column card layout. Each side must have: definition of what it is, when to use it, its strengths, its weaknesses. Never just put two labels in two columns.
 
+Algorithms and Processes:
+Always use a step-flow layout: numbered dot → connecting line → card with title and explanation. Each step card must explain what happens in that step and why, not just name it.
 
-What changed from the old prompt and why:
-The old prompt was short so the AI treated it as a "make a summary" task. This one sets explicit length rules — every concept gets proper explanation, every example gets worked out fully, and there's a clear target that the notes should be able to replace the source content. The "what to avoid" section stops the AI from collapsing complex ideas into single bullet points, which was the main reason notes came out too short.
-One more tip — if notes still feel too short on a specific section, just reply:
+Flow Diagrams (for important processes):
+When a concept involves a sequence of decisions or data transformations (like a training pipeline, a sorting algorithm, a model architecture), represent it as an HTML/CSS flow diagram using boxes and arrows made from divs and unicode arrow characters (→, ↓, ⬇). Do not use external images. The flow should read top-to-bottom or left-to-right and each box should have a label and a one-line description inside it. Use this for things like: neural network forward pass, data preprocessing pipeline, algorithm decision tree, HTTP request lifecycle, etc.
 
-"Section [X] is too short — expand it with more explanation and work out all the examples fully"
+Advantages vs Disadvantages:
+Always place them side by side — green card on left, red card on right. Each point inside must have 2–3 sentences of real explanation, not just a word label.
 
-That's faster than regenerating everything.I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
-Length rule (most important):
+Hinglish:
+Add hinglish naturally only when it makes a concept click faster. Never force it. Wrap it in a styled hinglish tag. Example: "Yeh basically ek shortcut hai jo model ko overfit hone se rokta hai — jaise exam mein sirf ek hi type ke questions practice karo toh real exam mein fail ho jaoge."
 
-Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
-Every formula gets a plain-language explanation of what each term means
-Every example from the content must be fully worked out with numbers, not just mentioned
-Every function/algorithm gets explained in terms of what goes in, what happens inside, and what comes out
-Do NOT summarize or compress — if the content spent time on something, your notes should too
-Do NOT pad or repeat — say each thing once, say it well
-A good target: if the content is a 30-minute video, notes should be long enough to replace watching it
+Tables:
+Use tables for structured comparisons of 3+ items. Dark navy header row, alternating light blue rows, all text in deep navy. Never use a table for just 2 items — use cards for that.
 
-Content requirements:
+Key Takeaways (Last Section Always):
+Write 8 to 12 numbered points. Each point must be at least 2 full sentences — one sentence stating the fact, one sentence explaining why it matters or how to use it. Never write one-line takeaways.
 
-Start each section by answering "what is this and why does it matter" before going into details
-Cover every concept, definition, formula, comparison, worked example, and code snippet
-For comparisons (like A vs B): always explain both sides fully with a table or two-column card
-For formulas: write the formula, then explain each variable, then show a worked numerical example
-For code: explain what the function does in plain words first, then show the code block, then explain the output line by line
-For pros/cons or advantages/disadvantages: give at least 2–3 sentences per point, not just a label
-Add hinglish naturally where it helps understanding (not forced — only when it makes something click)
-End with a Key Takeaways section — 8 to 12 numbered points, each 2 sentences minimum
+SECTION C — WHAT TO AVOID (Strictly)
+❌ Do NOT write one-line bullet points for complex ideas
+❌ Do NOT skip any example that appears in the source content
+❌ Do NOT merge two different concepts into one vague paragraph
+❌ Do NOT add filler phrases ("As we can see...", "It is worth noting...", "In conclusion...")
+❌ Do NOT repeat the same point twice in different words
+❌ Do NOT make a section that is just a heading followed by 3 short bullets
+❌ Do NOT use dark backgrounds on any element — everything is light
+❌ Do NOT dump code randomly — always follow the logical sequence rule above
+❌ Do NOT write code explanations after the entire file — explain each block right where it appears
+❌ Do NOT use external images, CDN icons, or SVG files — all visuals must be pure HTML/CSS
+SECTION D — EXACT TEXT AND COLOR RULES
+These colors are mandatory. The AI must not guess or substitute.
 
-What to avoid:
+General Text Colors:
+Element	Color	Hex
+Body text (p, li)	Deep navy	#1a1a2e
+H1 and H2 headings	Very dark navy	#0d1b4b
+H3 subheadings	Dark slate blue	#1e3a5f
+H4 card headings	Dark blue	#0d3d8c
+Section number labels	Muted grey	#9aa5b4
+Small uppercase labels	Medium blue	#3d5c99
+Italic notes / footnotes	Medium blue	#3d5c99
+<strong> inside paragraphs	Dark navy	#0d1b4b
+Formula Box:
+Element	Color	Hex
+Box background	Light blue tint	#f4f7fe
+Box border	Soft blue	#b8ccf0
+Formula text (math)	Dark navy	#0d1b4b
+Formula title label	Medium blue	#3d5c99
+Explanation lines (// comments)	Steel blue	#5c7ab0
+Code Block — Syntax Colors (ALL code must use these exactly):
+Token Type	Color	Hex	Style
+Code block background	Light blue tint	#f4f7fe	—
+Default code text	Dark navy	#0d1b4b	normal
+Keywords (def, for, if, import, return, class, while, in, and, or, not, True, False, None)	Dark blue	#0d3d8c	bold
+Function names (after def or when called)	Dark purple	#7a1fa2	bold
+Strings (anything in quotes)	Dark red-brown	#8b2500	normal
+Comments (# lines)	Dark green	#1a5c2a	italic
+Numbers and numeric literals	Dark teal	#0d5c3a	bold
+Variable names	Dark blue	#0055aa	normal
+Imported class names / library names	Dark purple	#7a1fa2	bold
+Code block label/title	Medium blue	#3d5c99	—
+Inline code (backtick style)	—	bg #e8eef8, text #0d3d8c	—
+Important: Code must be written as HTML <span> tags with style="color: ..." applied to each token type. Do not use any external syntax highlighting library. Write the color spans manually for every keyword, function name, string, comment, number, and variable in the code block.
 
-Do NOT write one-line bullet points for complex ideas
-Do NOT skip examples that appear in the source content
-Do NOT merge two different concepts into one vague paragraph
-Do NOT add fluff, filler phrases, or repeat the same point twice
-Do NOT make sections that are just a heading with 3 short bullets under it
+Highlight / Callout Boxes:
+Box Type	Background	Left Border	Text	Strong Text
+Insight / Key point (orange)	#fffbf0	#c87d00	#1a1a2e	#7a4400
+Good / Advantage (green)	#f0faf4	#1a7a44	#1a1a2e	#0d4a27
+Warning / Disadvantage (red)	#fff5f5	#b91c1c	#1a1a2e	#7f1d1d
+Definition box	#eef4ff	— border #93b8ef	label #0d3d8c	—
+Output / Result box	#f0faf4	— border #7abf96	#0d3d1e	label #0d5c2a
+Table Colors:
+Element	Color
+Header background	#0d3d8c
+Header text	#ffffff
+Even rows	#f4f7fe
+Odd rows	#ffffff
+Cell text	#1a1a2e
+Cell border	#d0daea
+Card Colors:
+Card Type	Background	Border	Heading Color
+Regular info card	#f9fbff	#b8ccf0	#0d3d8c
+Advantage card	#f0faf4	#1a7a44	#0d4a27
+Disadvantage card	#fff5f5	#b91c1c	#7f1d1d
+Flow diagram box	#eef4ff	#93b8ef	#0d1b4b
+Hinglish Tag:
+Property	Value
+Background	#fff5e6
+Border	2px solid #e8a838
+Text color	#7a3800
+Font style	italic
+Font	Source Sans 3
+Step Flow (Algorithm Steps):
+Element	Value
+Dot color	#1a6ef5
+Connecting line	#c8d8f5
+Card background	#f4f7fe
+Card border	#c8d8f5
+Card strong text	#0d3d8c
+Dividers:
+<hr> between every major section: border: none; border-top: 1.5px solid #c8d8f5;
+SECTION E — LAYOUT AND DESIGN RULES
+Fonts (load from Google Fonts):
 
-Design requirements:
+text
 
-White background everywhere — no dark backgrounds, including code blocks
-Deep navy/dark blue for h1 and h2 headings, dark slate for h3
-Blue left-border (4px solid) for all h2 section headings
-Body text in deep navy (#1a1a2e), not plain black
-Light blue tinted background (#f4f7fe) for formula boxes, code blocks, and info cards
-Code syntax colors: keywords = dark blue bold, function names = dark purple, strings = dark red-brown, comments = dark green italic, numbers = dark teal
-Orange left-border highlight boxes for key insights and important notes
-Green left-border boxes for good results, advantages, key takeaways
-Red left-border boxes for warnings, disadvantages, common mistakes
-Two-column grid cards for comparisons and side-by-side content
-Step flow layout (dot + line + card) for algorithms and processes
-Advantages vs disadvantages in colored cards — green card and red card side by side
-Results/output in light green box with dark green monospace text
-Tables: dark navy header, alternating light blue rows
-Hinglish tags: warm cream background, amber border, dark brown italic text
-Google Fonts: Crimson Pro (headings), Source Sans 3 (body), JetBrains Mono (code/formulas)
-Section numbers (01, 02...) in small grey monospace above each h2
+https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap
+H1, H2: Crimson Pro, serif
+All body text, paragraphs, list items: Source Sans 3, sans-serif
+All code, formulas, labels, section numbers: JetBrains Mono, monospace
+Background: #ffffff everywhere — absolutely no dark backgrounds on any element, ever.
 
-Structure to follow:
+H2 headings: Always have border-left: 4px solid #1a6ef5; padding-left: 12px;
 
-Header — topic name (large serif), subtitle, label showing subject/series
-Section 01 — Prerequisites or Context (if any)
-Sections 02 onwards — one section per major concept or topic from the content, in the same order as the source
-Second-to-last section — Code Implementation (if code is present)
-Last section — Key Takeaways (8–12 points, 2 sentences each)
+Section numbers: Small JetBrains Mono text in #9aa5b4 written above every H2 as 01, 02, 03...
 
-The final notes should feel like they were written by a student who understood everything deeply and wants someone else to be able to learn the full topic just from these notes — without needing to watch the video or read the original.
+Comparisons: Always CSS Grid, grid-template-columns: 1fr 1fr, gap 20px.
 
-in this not mentioned that all formula and code should be in code formate color of text's what like other things proper make sure ai not get mistakeShow more12:23 AMHere's the corrected and complete prompt with all text color and formatting rules explicitly stated so the AI never guesses:
+Algorithms: Always step-flow layout — vertical stack of: [dot] ── [card with step title and explanation], dot is a filled circle #1a6ef5, connected by a vertical line #c8d8f5.
 
-THE PROMPT:
+Flow Diagrams: Build using nested div elements. Each box is a styled div. Arrows between boxes use → or ↓ in styled spans. No images, no SVGs, no external libraries. The diagram must be readable and not overflow on normal screen widths.
 
-I am giving you [a YouTube video transcript / lecture notes / a document / code files] about [topic name]. Make proper HTML notes that are neither too short nor too long — cover everything meaningfully.
+Advantages vs Disadvantages: Always side-by-side, green card left, red card right, inside a CSS grid.
 
-LENGTH RULE (most important):
+Print styles: Include @media print { body { padding: 20px; } .no-print { display: none; } } at the bottom of the <style> block.
 
-Every concept gets 2–4 sentences of explanation minimum — not just a one-liner
-Every formula gets a plain-language explanation of what each term means
-Every example from the content must be fully worked out with numbers, not just mentioned
-Every function/algorithm gets explained in terms of what goes in, what happens inside, and what comes out
-Do NOT summarize or compress — if the content spent time on something, your notes should too
-Do NOT pad or repeat — say each thing once, say it well
-Target: notes should be detailed enough that someone can learn the full topic without needing the original source
+SECTION F — DOCUMENT STRUCTURE (Follow This Exactly)
+text
 
+<html>
+  <head>
+    → Google Fonts link
+    → Full <style> block with all CSS rules
+  </head>
+  <body>
+    → HEADER BLOCK
+        - Topic name in large Crimson Pro, color #0d1b4b
+        - Subtitle in Source Sans 3, color #2d3a5c
+        - Subject/series label in small caps JetBrains Mono, color #9aa5b4
 
-CONTENT REQUIREMENTS:
+    → SECTION 01 — Prerequisites / Background Context
+        (What prior knowledge is needed? What is the context for this topic?)
 
-Start each section by answering "what is this and why does it matter" before going into details
-Cover every concept, definition, formula, comparison, worked example, and code snippet from the source
-For comparisons (A vs B): explain both sides fully — use a table or two-column card
-For formulas: write the formula → explain each variable in plain language → show a fully worked numerical example
-For code: explain what the function does in plain words first → show the full code block → explain the output
-For pros/cons: write 2–3 sentences per point, not just a label word
-Add hinglish naturally where it helps something click (not forced)
-End with Key Takeaways — 8 to 12 numbered points, each at least 2 sentences
+    → SECTION 02 — First major concept from the source
+    → SECTION 03 — Second major concept from the source
+    → ... (one section per major concept, in the same order as the source)
 
-WHAT TO AVOID:
+    → SECOND-TO-LAST SECTION — Code Implementation
+        (Only if code appears in the source — follow all code rules from Section B)
 
-Do NOT write one-line bullet points for complex ideas
-Do NOT skip any example that appears in the source
-Do NOT merge two different concepts into one paragraph
-Do NOT add filler phrases or repeat the same point twice
-Do NOT make a section that is just a heading with 3 short bullets under it
+    → LAST SECTION — Key Takeaways
+        (8–12 numbered points, 2 full sentences each minimum)
 
+    → HR dividers between every section
+  </body>
+</html>
+SECTION G — FLOW DIAGRAM CONSTRUCTION RULE
+When you need to show a process, pipeline, or decision sequence, build it like this in HTML/CSS:
 
-TEXT COLORS (apply these exactly — this is critical):
-General text:
+text
 
-Body text (p, li): #1a1a2e (deep navy — not plain black)
-H1 and H2 headings: #0d1b4b (very dark navy)
-H3 subheadings: #1e3a5f (dark slate blue)
-Section number labels: #9aa5b4 (muted grey)
-Small labels / uppercase tags: #3d5c99 (medium blue)
-Italic notes / footnotes: #3d5c99
-<strong> tags inside paragraphs: #0d1b4b
+[Box: Step 1 Name]
+    Short description inside the box
+        ↓
+[Box: Step 2 Name]
+    Short description inside the box
+        ↓
+[Box: Step 3 Name — Decision]
+    Yes → [Box A]    No → [Box B]
+Each box is a div with:
 
-Formula box text:
+background: #eef4ff
+border: 1px solid #93b8ef
+border-radius: 8px
+padding: 12px 18px
+max-width: 420px
+font: Source Sans 3, color #1a1a2e
+Title inside in <strong> color #0d1b4b
+Arrows are <div style="text-align:center; font-size: 1.5rem; color: #1a6ef5;">↓</div> between boxes.
 
-Formula box background: #f4f7fe — border: #b8ccf0
-Formula text (the actual math): #0d1b4b (dark navy)
-Formula title label: #3d5c99
-Comments inside formula box (explanation lines starting with //): #5c7ab0
+For branching decisions, use a CSS flex row with two boxes side by side and label them "Yes →" and "No →".
 
-Code block text (light background — NOT dark):
-
-Code block background: #f4f7fe — border: #b8ccf0
-Default code text: #0d1b4b
-Keywords (def, for, if, import, return, class): #0d3d8c bold
-Function names: #7a1fa2 (dark purple) bold
-Strings (anything in quotes): #8b2500 (dark red-brown)
-Comments (# lines): #1a5c2a (dark green) italic
-Numbers and numeric values: #0d5c3a (dark teal) bold
-Variable names: #0055aa (dark blue)
-Imported class names / sklearn classes: #7a1fa2 (dark purple) bold
-Code block title label: #3d5c99, border-bottom #c8d8f5
-
-Inline code (backtick style):
-
-Background: #e8eef8 — text: #0d3d8c
-
-Box colors:
-
-Highlight / insight box: background #fffbf0, left-border #c87d00, text #1a1a2e, strong text #7a4400
-Green / good box: background #f0faf4, left-border #1a7a44, text #1a1a2e, strong text #0d4a27
-Red / warning box: background #fff5f5, left-border #b91c1c, text #1a1a2e, strong text #7f1d1d
-Definition box: background #eef4ff, border #93b8ef, label color #0d3d8c
-Output / result box: background #f0faf4, border #7abf96, text #0d3d1e, label #0d5c2a
-
-Table colors:
-
-Header row: background #0d3d8c, text #ffffff
-Even rows: background #f4f7fe
-Cell text: #1a1a2e
-Cell border: #d0daea
-
-Card colors:
-
-Regular info card: background #f9fbff, border #b8ccf0
-Card heading (h4): #0d3d8c, border-bottom #c8d8f5
-Advantage card: background #f0faf4, border #1a7a44, heading #0d4a27
-Disadvantage card: background #fff5f5, border #b91c1c, heading #7f1d1d
-Gradient/formula card title: #0d3d8c
-
-Hinglish tag:
-
-Background #fff5e6, border #e8a838, text #7a3800 italic
-
-Step flow (algorithm steps):
-
-Dot: #1a6ef5
-Line: #c8d8f5
-Card background: #f4f7fe, border #c8d8f5
-Card strong text: #0d3d8c
-
-HR divider: #c8d8f5
-
-DESIGN & LAYOUT REQUIREMENTS:
-
-White background (#ffffff) everywhere — absolutely no dark backgrounds on any element
-Google Fonts: Crimson Pro (h1, h2 headings), Source Sans 3 (all body text), JetBrains Mono (all code, formulas, labels)
-H2 headings: blue left-border 4px solid #1a6ef5, padding-left 12px
-Section numbers: small JetBrains Mono text in #9aa5b4 above each h2
-Comparison content: always use two-column CSS grid cards
-Algorithms and processes: use step flow layout (dot → line → card, repeating)
-Advantages vs disadvantages: side-by-side colored cards (green left, red right)
-All formulas: inside a formula box with light blue background — use JetBrains Mono font, #0d1b4b text
-All code: inside a code block with light blue background — syntax highlighted using the exact colors above
-HR between every major section
-Print-friendly: @media print { body { padding: 20px; } }
-
-
-STRUCTURE:
-
-Header — large serif topic name (#0d1b4b), subtitle in #2d3a5c, label in small caps grey monospace
-Section 01 — Prerequisites or Background context
-Sections 02 onwards — one section per major concept, in the same order as the source material
-Second-to-last section — Code Implementation (if code is in the source)
-Last section — Key Takeaways (8–12 numbered points, 2 sentences each minimum)
-
-
-The final output should be a single complete HTML file. The notes should feel like they were written by a student who fully understood the content and wants someone else to learn the entire topic from just these notes — without needing to refer back to the original source at all.
 """
 
 def build_topic_prompt(topic: str) -> str:
