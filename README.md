@@ -60,6 +60,8 @@ git clone https://github.com/ashyou09/Note_weiver.git
 
 ## Architecture
 
+NotesMaster AI follows a decoupled architecture, separating the presentation layer from the intelligent orchestration layer.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  NotesMaster AI                         │
@@ -83,6 +85,138 @@ git clone https://github.com/ashyou09/Note_weiver.git
 │   └──────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### 1. Presentation Layer (Frontend)
+- **Technology**: Vanilla HTML5, CSS3 (Glassmorphism), and asynchronous JavaScript.
+- **Communication**: Uses **Server-Sent Events (SSE)** to stream AI responses token-by-token, providing a responsive, "live-writing" experience.
+- **Features**: Real-time rendering, model switching, and session management.
+
+### 2. Orchestration Layer (Backend)
+- **Technology**: Flask (Python 3.11+).
+- **Responsibility**: Routes user requests, manages file uploads (PDF/TXT), and interfaces with the Claw Agent Infrastructure.
+
+### 3. Intelligence Layer (AI Models)
+- **Local Integration**: Interfaces with **Ollama** using OpenAI-compatible endpoints.
+- **Cloud Integration**: Interfaces with **OpenRouter/HF Inference API** for high-performance models when local hardware is limited.
+
+---
+
+## Agent Infrastructure (Claw-Code)
+
+The "Agentic" behavior of NotesMaster AI is powered by the **Claw-Code Infrastructure** located in the `src/` directory. Rather than being a simple chatbot, the system uses several coordinated components to maintain state and context.
+
+### 💡 Key Components
+
+| Component | Responsibility |
+| :--- | :--- |
+| **`QueryEnginePort`** | The central orchestrator for a "turn." It manages session IDs, tracks token usage, and ensures the LLM stays within its "thought budget." |
+| **`TranscriptStore`** | Acts as the agent's short-term and long-term memory. It captures all user prompts and AI responses, performing **auto-compaction** to keep the context window efficient. |
+| **`PortRuntime`** | Handles prompt routing and multi-step logic. It ensures that the system knows which "tools" or "skills" are available in the current workspace context. |
+| **`SystemInit`** | Dynamically builds the "Workspace Context" injected into every prompt, giving the AI awareness of the repository structure and environment. |
+
+### 🧠 How the "Agent" Works
+1.  **Context Injection**: Every request starts by building a workspace map via `build_system_init_message()`.
+2.  **Memory Recall**: The `TranscriptStore` replays previous turns, ensuring the AI remembers what was discussed or generated earlier in the session.
+3.  **State Persistence**: Sessions are saved as JSON in `notesmaster/.sessions/`, allowing users to resume their work even after a server restart.
+4.  **Token Management**: The `QueryEnginePort` monitors budget to prevent infinite loops or excessive costs, automatically compacting history when it gets too long.
+
+---
+
+## How the Agent Thinks: The ReAct Loop
+
+NotesMaster AI follows a **ReAct (Reason + Act)** pattern to ensure that the study notes it generates are deep, structured, and technically accurate.
+
+### 🧠 The Reasoning Process
+
+| Step | Name | Component | Internal Logic |
+| :--- | :--- | :--- | :--- |
+| **1** | **Thought** | `LLM Core` | Analyzes user input to determine the pedagogical path (e.g., "Define first, then provide Python code"). |
+| **2** | **Action** | `PortRuntime` | Performs semantic matching to identify if local workspace context or specific tools are needed. |
+| **3** | **Action Input** | `SystemInit` | Synthesizes the exact instruction set, applying strict CSS/HTML formatting rules from `SYSTEM_BASE`. |
+| **4** | **Observation** | `TranscriptStore` | Recalls history to avoid repetition and maintain context across a multi-turn study session. |
+| **...** | **...** | `Loop` | The cycle continues if the model needs more tokens to fulfill complex technical sections. |
+| **Final** | **Final Answer** | `server.py` | Finalizes the self-contained HTML document, saves it to `/notes`, and renders it in the UI. |
+
+### 🛠 Visual Request Lifecycle
+
+```mermaid
+graph TD
+    UI[Frontend: User Input] -- SSE Request --> Srv[Server: Flask /api/generate]
+    Srv -- Initialize --> Ctx[SystemInit: Build Workspace Context]
+    Ctx -- Semantic Match --> Rut[Runtime: Tool & Command Routing]
+    Rut -- Fetch Memory --> Mem[TranscriptStore: Context Recall]
+    Mem -- Structured Prompt --> LLM{LLM: Reason & Act}
+    LLM -- Token Stream --> SSE[SSE: Real-time UI Update]
+    LLM -- State Update --> Upd[Engine: Update Session & History]
+    Upd -- File I/O --> Save[Storage: Persistent .html Note]
+    Save -- Complete --> End([Result: Downloadable Study Guide])
+```
+
+### 📋 Lifecycle of a Request (Step-by-Step)
+1. **Trigger**: You press "Generate Notes" in the browser.
+2. **Analysis**: The backend (`server.py`) identifies if you are in **Topic**, **Paste**, or **Upload** mode.
+3. **Context Construction**: The `SystemInit` module scans your workspace to give the AI context about the project environment.
+4. **Memory Retrieval**: The `TranscriptStore` pulls the last 10 messages from your session to ensure continuity.
+5. **Intelligent Routing**: `PortRuntime` scores your request against available mirrored tools (like `FileReadTool`) to decide what "skills" to use.
+6. **Streaming Generation**: The selected LLM (Qwen or Llama) streams valid HTML tokens via **Server-Sent Events (SSE)**.
+7. **Persistence**: Once generation is finished, the backend saves the full HTML string as a unique file in the `notes/` directory.
+8. **Completion**: The UI receives a `done` event, providing the final file link for download or preview.
+
+---
+
+---
+
+## LLM Reason & Act: The Core Loop
+
+NotesMaster AI utilizes a sophisticated **AgentExecutor** loop that allows the LLM to reason dynamically and interact with its environment through tools. This ensures that every note generated is contextually relevant and technically accurate.
+
+### 🛠 The Reasoning Loop (Process Map)
+
+```mermaid
+graph TD
+    Start([1. AgentExecutor]) --> Query[2. Receive User Query]
+    Query --> Reason[3. Pass to Agent + LLM + Prompt]
+    Reason --> Goal{Need a tool?}
+    
+    Goal -- YES --> Action[4. Agent Action: Pick Tool]
+    Action --> Execute[5. Execute Tool: FileRead/Grep/etc.]
+    Execute --> Observe[6. Collect Observation]
+    Observe --> Update[7. Update Scratchpad/History]
+    Update -- Loop Back --> Reason
+    
+    Goal -- NO --> Finish[8. Agent Finish]
+    Finish --> Output([9. Return Final Structured HTML])
+```
+
+### 🧠 How it Works
+
+1.  **Orchestration**: The `AgentExecutor` (managed by `QueryEnginePort`) initiates the session.
+2.  **Prompt Engineering**: The user's query is wrapped in a high-density system prompt and passed to the logic engine.
+3.  **The Decision Point**: The LLM evaluates if it has enough information to generate the notes. If it needs to "know" more about your workspace or a specific file, it triggers the tool-use branch.
+4.  **Action & Execution**: `PortRuntime` semantically selects the appropriate tool (e.g., `FileReadTool` for a PDF or `GrepTool` for workspace search).
+5.  **Observation**: The output from the tool is fed back into the `TranscriptStore`.
+6.  **Refinement**: The "Scratchpad" (our rolling context) is updated with this new information, and the loop repeats until the LLM is confident.
+7.  **Finalization**: Once the LLM decides no more tools are needed, it synthesizes the final HTML study guide.
+
+---
+
+## Agentic Tool Surface
+
+To extend the capabilities of the core LLM, NotesMaster AI uses a **Mirrored Tool Surface** provided by the Claw infrastructure. These tools allow the agent to interact with the environment and manage complex data structures during the "Act" phase.
+
+### 🛠 Active Tools
+
+| Tool | Category | Role in NotesMaster |
+| :--- | :--- | :--- |
+| **`FileReadTool`** | Workspace | Reads uploaded PDFs and text files to extract source material for notes. |
+| **`GrepTool`** | Discovery | Searches the local session history and workspace for related topics to ensure consistency. |
+| **`BashTool`** | System | (Gated) Used for environment verification and local resource management. |
+| **`TranscriptStore`** | Memory | An internal tool that manages the rolling conversation history and auto-compaction. |
+| **`SystemInit`** | Context | Injects current repository structure and environment variables into the agent's context. |
+| **`PortRuntime`** | Routing | Dynamically scores and matches user prompts to the most relevant tools/commands. |
+
+### 🔄 Dynamic Tool Matching
+During every generation request, the `PortRuntime.route_prompt()` method performs semantic matching between your query and these tools. If a match is found with a high enough score, the tool's context is prioritized for the AI's reasoning process.
 
 ---
 
@@ -202,10 +336,9 @@ Switch to **Upload PDF / File**, drop a `.pdf`, `.txt`, or `.md` file, generate.
 
 | Model            | Type          | Speed       | Best For                         |
 | ---------------- | ------------- | ----------- | -------------------------------- |
-| `qwen3.5:0.8b` | Local         | ⚡⚡⚡      | Quick drafts                     |
-| `qwen3.5:2b`   | Local         | ⚡⚡        | Most topics                      |
-| `qwen3.5:4b`   | Local         | ⚡ Balanced | **Default — recommended** |
-| `qwen3.5:9b`   | Local         | 🐢          | Deep/technical topics            |
+| `qwen3.5:2b`   | Local         | ⚡⚡        | **Default — recommended** |
+| `qwen3.5:4b`   | Local         | ⚡ Balanced | Balanced reasoning / depth       |
+| `llama3.2:3b`  | Local         | ⚡⚡        | Great alternative for technical topics |
 | `Qwen3-8B`     | ☁️ HF Cloud | ⚡          | Latest Qwen3, no Ollama needed   |
 | `Qwen2.5-7B`   | ☁️ HF Cloud | ⚡          | Stable fallback cloud model      |
 
